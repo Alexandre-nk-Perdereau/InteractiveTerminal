@@ -1,0 +1,36 @@
+{
+  "id": "interactive-terminal",
+  "title": "Interactive Terminal",
+  "description": "Deploy interactive terminals in your games. Features multiple screen types (chat, hacking minigame, login), GM controls for permissions, glitch effects, sounds, and real-time player interaction.",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "authors": [
+    {
+      "name": "Rouge"
+    }
+  ],
+  "esmodules": [
+    "scripts/module.js"
+  ],
+  "styles": [
+    "styles/terminal.css",
+    "styles/glitch.css",
+    "styles/screens.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "fr",
+      "name": "Français",
+      "path": "lang/fr.json"
+    }
+  ],
+  "socket": true
+}

@@ -1,0 +1,339 @@
+<div class="gm-controls">
+  {{!-- Terminal Selection --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-list"></i> {{localize "ITERM.GM.Terminals"}}</h3>
+    <div class="gm-row">
+      <select class="gm-terminal-select">
+        <option value="">-- {{localize "ITERM.GM.SelectTerminal"}} --</option>
+        {{#each terminals}}
+        <option value="{{this.id}}" {{#if (eq this.id ../selectedId)}}selected{{/if}}>
+          {{this.title}}
+          {{#if this.deployed}}[LIVE]{{/if}}
+          {{#if this.isOpen}}({{localize "ITERM.GM.Open"}}){{/if}}
+        </option>
+        {{/each}}
+      </select>
+    </div>
+    <button type="button" data-action="createTerminal" class="gm-btn gm-btn-full">
+      <i class="fas fa-plus"></i> {{localize "ITERM.GM.CreateTerminal"}}
+    </button>
+  </section>
+
+  {{#if selected}}
+  {{!-- Terminal Identity --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-tag"></i> {{localize "ITERM.GM.TerminalSettings"}}</h3>
+    <div class="gm-row">
+      <label class="gm-label">{{localize "ITERM.GM.Title"}}</label>
+      <input type="text" class="gm-terminal-title gm-input" value="{{selected.title}}" />
+      <button type="button" data-action="saveTitle" class="gm-btn">
+        <i class="fas fa-save"></i>
+      </button>
+    </div>
+  </section>
+
+  {{!-- Deploy / Preview / Lock --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-rocket"></i> {{localize "ITERM.GM.Deploy"}}</h3>
+    <div class="gm-row">
+      <button type="button" data-action="previewTerminal" class="gm-btn gm-btn-half">
+        <i class="fas fa-search"></i> {{localize "ITERM.GM.Preview"}}
+      </button>
+      {{#if isDeployed}}
+      <button type="button" data-action="undeployTerminal" class="gm-btn gm-btn-half gm-btn-danger">
+        <i class="fas fa-eye-slash"></i> {{localize "ITERM.GM.Undeploy"}}
+      </button>
+      {{else}}
+      <button type="button" data-action="deployTerminal" class="gm-btn gm-btn-half gm-btn-success">
+        <i class="fas fa-paper-plane"></i> {{localize "ITERM.GM.DeployToPlayers"}}
+      </button>
+      {{/if}}
+    </div>
+    <div class="gm-row">
+      <button type="button" data-action="toggleLock" class="gm-btn gm-btn-half {{#if selected.locked}}gm-btn-active{{/if}}">
+        <i class="fas fa-{{#if selected.locked}}lock{{else}}lock-open{{/if}}"></i>
+        {{#if selected.locked}}{{localize "ITERM.GM.Unlock"}}{{else}}{{localize "ITERM.GM.Lock"}}{{/if}}
+      </button>
+      <button type="button" data-action="deleteTerminal" class="gm-btn gm-btn-half gm-btn-danger">
+        <i class="fas fa-trash"></i> {{localize "ITERM.GM.Delete"}}
+      </button>
+    </div>
+  </section>
+
+  {{!-- Screen Switch --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-tv"></i> {{localize "ITERM.GM.Screen"}}</h3>
+    <div class="gm-row">
+      {{#each screens}}
+      <button type="button" data-action="switchScreen" data-screen="{{this.id}}"
+              class="gm-btn gm-btn-screen {{#if (eq this.id ../currentScreen)}}active{{/if}}">
+        {{this.label}}
+      </button>
+      {{/each}}
+    </div>
+    <div class="gm-row">
+      <button type="button" data-action="resetScreen" class="gm-btn gm-btn-full">
+        <i class="fas fa-undo"></i> {{localize "ITERM.GM.ResetScreen"}}
+      </button>
+    </div>
+  </section>
+
+  {{!-- Theme --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-palette"></i> {{localize "ITERM.GM.Theme"}}</h3>
+    <div class="gm-row">
+      {{#each themes}}
+      <button type="button" data-action="changeTheme" data-theme="{{this.id}}"
+              class="gm-btn gm-btn-theme theme-{{this.id}} {{#if (eq this.id ../selected.theme)}}active{{/if}}">
+        {{this.label}}
+      </button>
+      {{/each}}
+    </div>
+  </section>
+
+  {{!-- Player Permissions --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-users"></i> {{localize "ITERM.GM.Permissions"}}</h3>
+    {{#each players}}
+    <div class="gm-row gm-permission-row">
+      <label>
+        <input type="checkbox" class="gm-player-permission"
+               data-user-id="{{this.id}}"
+               {{#if this.permitted}}checked{{/if}} />
+        {{this.name}}
+      </label>
+    </div>
+    {{/each}}
+    <button type="button" data-action="updatePermissions" class="gm-btn gm-btn-full">
+      <i class="fas fa-save"></i> {{localize "ITERM.GM.SavePermissions"}}
+    </button>
+  </section>
+
+  {{!-- System Message --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-bullhorn"></i> {{localize "ITERM.GM.SystemMessage"}}</h3>
+    <textarea class="gm-system-message gm-input" rows="2" placeholder="{{localize 'ITERM.GM.SystemMessagePlaceholder'}}"></textarea>
+    <div class="gm-row">
+      <select class="gm-system-message-style gm-input">
+        <option value="term-warning">Warning (yellow)</option>
+        <option value="term-error">Error (red)</option>
+        <option value="term-success">Success (green)</option>
+        <option value="term-info">Info (blue)</option>
+        <option value="term-bold">Bold</option>
+      </select>
+      <button type="button" data-action="sendSystemMessage" class="gm-btn">
+        <i class="fas fa-bullhorn"></i> {{localize "ITERM.GM.Send"}}
+      </button>
+    </div>
+  </section>
+
+  {{!-- Command Response (visible when command screen active) --}}
+  {{#if isCommandScreen}}
+  <section class="gm-section gm-section-highlight">
+    <h3><i class="fas fa-terminal"></i> {{localize "ITERM.GM.CommandResponse"}}</h3>
+    {{#if pendingCommands.length}}
+    {{#each pendingCommands}}
+    <div class="gm-pending-command">
+      <span class="gm-pending-label">{{this.userName}}:</span>
+      <code class="gm-pending-text">{{this.command}}</code>
+    </div>
+    {{/each}}
+    {{else}}
+    <div class="gm-pending-none term-dim">{{localize "ITERM.GM.NoPendingCommands"}}</div>
+    {{/if}}
+    <textarea class="gm-command-response gm-input" rows="3" placeholder="{{localize 'ITERM.GM.TypeResponse'}}"></textarea>
+    <button type="button" data-action="sendGmResponse" class="gm-btn gm-btn-full gm-btn-success">
+      <i class="fas fa-reply"></i> {{localize "ITERM.GM.SendResponse"}}
+    </button>
+  </section>
+  {{/if}}
+
+  {{!-- Chat NPC Controls --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-comment"></i> {{localize "ITERM.GM.NpcChat"}}</h3>
+    <div class="gm-row">
+      <label class="gm-label">{{localize "ITERM.GM.NpcName"}}</label>
+      <input type="text" class="gm-npc-name gm-input" value="{{selected.screenConfigs.chat.npcName}}" placeholder="SYSTEM" />
+    </div>
+    <textarea class="gm-npc-message gm-input" rows="3" placeholder="{{localize 'ITERM.GM.TypeMessage'}}"></textarea>
+    <button type="button" data-action="sendNpcMessage" class="gm-btn gm-btn-full">
+      <i class="fas fa-paper-plane"></i> {{localize "ITERM.GM.Send"}}
+    </button>
+  </section>
+
+  {{!-- Effects --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-bolt"></i> {{localize "ITERM.GM.Effects"}}</h3>
+    <div class="gm-row gm-effects-row">
+      {{#each glitchTypes}}
+      <button type="button" data-action="triggerGlitch" data-glitch-type="{{this.id}}" class="gm-btn gm-btn-small">
+        {{this.label}}
+      </button>
+      {{/each}}
+    </div>
+    <div class="gm-row" style="margin-top: 8px;">
+      <label class="gm-label">Loop</label>
+      <select class="gm-loop-glitch-type gm-input" style="flex:1;">
+        {{#each glitchTypes}}
+        <option value="{{this.id}}">{{this.label}}</option>
+        {{/each}}
+      </select>
+      <input type="number" class="gm-loop-interval gm-input" value="3" min="0.5" max="30" step="0.5" style="width:55px;" title="Interval (seconds)" />
+      <span style="font-size:11px;color:#888;">s</span>
+      <button type="button" data-action="startGlitchLoop" class="gm-btn gm-btn-small gm-btn-success">
+        <i class="fas fa-play"></i>
+      </button>
+      <button type="button" data-action="stopGlitchLoop" class="gm-btn gm-btn-small gm-btn-danger">
+        <i class="fas fa-stop"></i>
+      </button>
+    </div>
+  </section>
+
+  {{!-- Sounds --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-volume-up"></i> {{localize "ITERM.GM.Sounds"}}</h3>
+    <div class="gm-row gm-effects-row">
+      {{#each soundTypes}}
+      <button type="button" data-action="playSound" data-sound="{{this.id}}" class="gm-btn gm-btn-small">
+        {{this.label}}
+      </button>
+      {{/each}}
+    </div>
+  </section>
+
+  {{!-- Macros / Sequences --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-magic"></i> {{localize "ITERM.GM.Macros"}}</h3>
+    <div class="gm-row gm-effects-row">
+      <button type="button" data-action="runMacro" data-macro="alert" class="gm-btn gm-btn-small gm-btn-danger">
+        Alert
+      </button>
+      <button type="button" data-action="runMacro" data-macro="malfunction" class="gm-btn gm-btn-small">
+        Malfunction
+      </button>
+      <button type="button" data-action="runMacro" data-macro="bootup" class="gm-btn gm-btn-small gm-btn-success">
+        Boot Up
+      </button>
+      <button type="button" data-action="runMacro" data-macro="shutdown" class="gm-btn gm-btn-small gm-btn-danger">
+        Shutdown
+      </button>
+      <button type="button" data-action="runMacro" data-macro="hack" class="gm-btn gm-btn-small">
+        Hack Attack
+      </button>
+    </div>
+  </section>
+
+  {{!-- Custom Sequence Editor --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-list-ol"></i> {{localize "ITERM.GM.CustomSequences"}}</h3>
+
+    {{!-- Saved sequences --}}
+    {{#if customSequences.length}}
+    <div class="gm-saved-sequences">
+      {{#each customSequences}}
+      <div class="gm-row gm-saved-seq-row">
+        <span class="gm-seq-name">{{this.name}} <small class="term-dim">({{this.steps.length}} steps)</small></span>
+        <button type="button" data-action="runSavedSequence" data-index="{{@index}}" class="gm-btn gm-btn-small gm-btn-success">
+          <i class="fas fa-play"></i>
+        </button>
+        <button type="button" data-action="deleteSavedSequence" data-index="{{@index}}" class="gm-btn gm-btn-small gm-btn-danger">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+      {{/each}}
+    </div>
+    {{/if}}
+
+    {{!-- Step editor --}}
+    <div class="sequence-steps-list"></div>
+    <div class="gm-row" style="margin-top:6px;">
+      <button type="button" data-action="addSequenceStep" class="gm-btn gm-btn-small">
+        <i class="fas fa-plus"></i> {{localize "ITERM.GM.AddStep"}}
+      </button>
+      <button type="button" data-action="removeLastStep" class="gm-btn gm-btn-small gm-btn-danger">
+        <i class="fas fa-minus"></i>
+      </button>
+    </div>
+    <div class="gm-row" style="margin-top:6px;">
+      <button type="button" data-action="runCustomSequence" class="gm-btn gm-btn-half gm-btn-success">
+        <i class="fas fa-play"></i> {{localize "ITERM.GM.RunSequence"}}
+      </button>
+    </div>
+    <div class="gm-row" style="margin-top:4px;">
+      <input type="text" class="custom-sequence-name gm-input" placeholder="{{localize 'ITERM.GM.SequenceName'}}" />
+      <button type="button" data-action="saveCustomSequence" class="gm-btn">
+        <i class="fas fa-save"></i>
+      </button>
+    </div>
+  </section>
+
+  {{!-- Screen Config --}}
+  <section class="gm-section">
+    <h3><i class="fas fa-cog"></i> {{localize "ITERM.GM.ScreenConfig"}}</h3>
+
+    <details class="gm-config-details">
+      <summary>Login</summary>
+      <form class="screen-config-form">
+        <input type="hidden" name="screenId" value="login" />
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Login.Username"}}</label>
+          <input type="text" name="username" class="gm-input" value="{{selected.screenConfigs.login.username}}" />
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Login.Password"}}</label>
+          <input type="text" name="password" class="gm-input" value="{{selected.screenConfigs.login.password}}" />
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.GM.SuccessScreen"}}</label>
+          <select name="successScreen" class="gm-input">
+            <option value="chat" {{#if (eq selected.screenConfigs.login.successScreen "chat")}}selected{{/if}}>Chat</option>
+            <option value="hacking" {{#if (eq selected.screenConfigs.login.successScreen "hacking")}}selected{{/if}}>Hacking</option>
+            <option value="command" {{#if (eq selected.screenConfigs.login.successScreen "command")}}selected{{/if}}>Command</option>
+          </select>
+        </div>
+        <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>
+      </form>
+    </details>
+
+    <details class="gm-config-details">
+      <summary>Command</summary>
+      <form class="screen-config-form">
+        <input type="hidden" name="screenId" value="command" />
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Command.Hostname"}}</label>
+          <input type="text" name="hostname" class="gm-input" value="{{commandHostname}}" />
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Command.Prompt"}}</label>
+          <input type="text" name="prompt" class="gm-input" value="{{commandPrompt}}" style="width:50px;" />
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Command.Motd"}}</label>
+          <textarea name="motd" class="gm-input" rows="2">{{commandMotd}}</textarea>
+        </div>
+        <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>
+      </form>
+    </details>
+
+    <details class="gm-config-details">
+      <summary>Hacking</summary>
+      <form class="screen-config-form">
+        <input type="hidden" name="screenId" value="hacking" />
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Hacking.Words"}} (comma-separated)</label>
+          <textarea name="words" class="gm-input" rows="2">{{hackingWords}}</textarea>
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Hacking.CorrectWord"}}</label>
+          <input type="text" name="correctWord" class="gm-input" value="{{selected.screenConfigs.hacking.correctWord}}" />
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Hacking.Attempts"}}</label>
+          <input type="number" name="attempts" class="gm-input" value="{{selected.screenConfigs.hacking.attempts}}" min="1" max="10" />
+        </div>
+        <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>
+      </form>
+    </details>
+  </section>
+  {{/if}}
+</div>

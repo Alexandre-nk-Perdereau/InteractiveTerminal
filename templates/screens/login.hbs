@@ -1,0 +1,37 @@
+<div class="screen-login">
+  <div class="login-boot-output screen-output">
+    {{!-- Boot sequence lines injected by JS --}}
+  </div>
+
+  {{#unless locked}}
+  <div class="login-form-container">
+    <form class="login-form">
+      {{#if showUsername}}
+      <div class="login-field">
+        <label class="login-label">{{localize "ITERM.Login.Username"}}</label>
+        <div class="login-value">{{username}}</div>
+      </div>
+      {{/if}}
+      <div class="login-field">
+        <label class="login-label">{{localize "ITERM.Login.Password"}}</label>
+        <input type="password" class="login-password-input terminal-input"
+               placeholder="********"
+               {{#unless canInteract}}disabled{{/unless}}
+               autocomplete="off" />
+      </div>
+      <div class="login-submit-row">
+        <button type="submit" class="login-submit-btn"
+                {{#unless canInteract}}disabled{{/unless}}>
+          {{localize "ITERM.Login.Submit"}}
+        </button>
+      </div>
+    </form>
+  </div>
+  {{/unless}}
+
+  <div class="login-status term-dim">
+    {{#if locked}}
+    TERMINAL LOCKED - TOO MANY FAILED ATTEMPTS
+    {{/if}}
+  </div>
+</div>

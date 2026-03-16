@@ -1,0 +1,35 @@
+<div class="interactive-terminal {{themeClass}}">
+  <div class="terminal-crt flicker">
+    {{!-- GM Controls Button --}}
+    {{#if isGM}}
+    <button class="terminal-gm-controls-btn" data-action="gmControls" data-tooltip="GM Controls">
+      <i class="fas fa-cog"></i> GM
+    </button>
+    {{/if}}
+
+    <div class="terminal-content">
+      {{!-- Header --}}
+      <div class="terminal-header">
+        <span class="terminal-title">{{title}}</span>
+        <span class="terminal-status">
+          <i class="fas fa-circle" style="color: #33ff33; font-size: 8px;"></i>
+          {{localize "ITERM.Terminal.Online"}}
+        </span>
+      </div>
+
+      {{!-- Screen body - screens render here --}}
+      <div class="terminal-body" data-screen="{{screenName}}">
+        {{!-- Content injected by screen JS --}}
+      </div>
+
+      {{!-- Input footer --}}
+      <div class="terminal-footer" style="{{#unless hasInput}}display: none;{{/unless}}">
+        <span class="terminal-prompt">{{promptSymbol}}</span>
+        <input type="text" class="terminal-input"
+               placeholder="{{inputPlaceholder}}"
+               {{#unless canInteract}}disabled{{/unless}}
+               autocomplete="off" spellcheck="false" />
+      </div>
+    </div>
+  </div>
+</div>

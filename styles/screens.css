@@ -1,0 +1,622 @@
+/* ========================================
+   Interactive Terminal - Screen-Specific Styles
+   ======================================== */
+
+/* ---- LOGIN SCREEN ---- */
+.screen-login {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.login-boot-output {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.login-form-container {
+  padding: 16px 0;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-label {
+  color: var(--term-color);
+  min-width: 100px;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.login-value {
+  color: var(--term-color);
+  font-weight: bold;
+}
+
+.login-password-input {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--term-color-dim);
+  color: var(--term-color);
+  font-family: var(--term-font);
+  font-size: 14px;
+  padding: 6px 10px;
+  outline: none;
+  caret-color: var(--term-color);
+}
+
+.login-password-input:focus {
+  border-color: var(--term-color);
+  box-shadow: 0 0 8px var(--term-color-glow);
+}
+
+.login-submit-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.login-submit-btn {
+  background: transparent;
+  border: 1px solid var(--term-color);
+  color: var(--term-color);
+  font-family: var(--term-font);
+  font-size: 13px;
+  padding: 6px 20px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.2s;
+}
+
+.login-submit-btn:hover {
+  background: var(--term-color);
+  color: var(--term-bg);
+  box-shadow: 0 0 12px var(--term-color-glow);
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.login-status {
+  text-align: center;
+  padding: 8px;
+  font-size: 14px;
+  min-height: 24px;
+}
+
+/* ---- CHAT SCREEN ---- */
+.screen-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-header {
+  padding-bottom: 8px;
+  font-size: 12px;
+}
+
+.chat-separator {
+  color: var(--term-color-dim);
+  margin-bottom: 8px;
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-message {
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.chat-sender {
+  font-weight: bold;
+  color: var(--term-color);
+}
+
+.chat-user .chat-sender {
+  color: var(--term-color);
+}
+
+.chat-npc .chat-sender {
+  color: var(--term-amber);
+  text-shadow: 0 0 5px var(--term-amber-glow);
+}
+
+.chat-text {
+  color: var(--term-color);
+}
+
+.chat-npc .chat-text {
+  color: var(--term-amber);
+}
+
+.chat-typing {
+  opacity: 0.7;
+}
+
+/* ---- HACKING SCREEN ---- */
+.screen-hacking {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: 13px;
+}
+
+.hack-header {
+  margin-bottom: 12px;
+}
+
+.hack-attempts {
+  margin-top: 4px;
+  color: var(--term-color);
+}
+
+.hack-attempts-left {
+  font-weight: bold;
+}
+
+.hack-attempt-block {
+  color: var(--term-color);
+  margin-left: 2px;
+}
+
+.hack-attempt-block.active {
+  text-shadow: 0 0 5px var(--term-color-glow);
+}
+
+.hack-main {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.hack-grid {
+  flex: 2;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.hack-row {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.hack-addr {
+  color: var(--term-color-dim);
+  user-select: none;
+}
+
+.hack-chars {
+  color: var(--term-color-dim);
+}
+
+.hack-cell {
+  cursor: default;
+}
+
+.hack-word {
+  color: var(--term-color);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.hack-word:hover,
+.hack-word-hover {
+  background: var(--term-color);
+  color: var(--term-bg);
+  text-shadow: none;
+}
+
+.hack-word-used {
+  color: var(--term-color-dim);
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+.hack-word-correct {
+  color: var(--term-bg);
+  background: var(--term-color);
+  text-shadow: none;
+}
+
+.hack-output {
+  flex: 1;
+  overflow-y: auto;
+  border-left: 1px solid var(--term-color-dim);
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hack-output-line {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hack-result {
+  text-align: center;
+  padding: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  margin-top: 8px;
+}
+
+/* ---- COMMAND SCREEN ---- */
+.screen-command {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.command-header {
+  padding-bottom: 4px;
+  font-size: 12px;
+}
+
+.command-separator {
+  color: var(--term-color-dim);
+  margin-bottom: 8px;
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.command-output {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.command-input-line {
+  color: var(--term-color);
+}
+
+.command-prompt {
+  color: var(--term-color);
+  font-weight: bold;
+}
+
+.command-text {
+  color: var(--term-color);
+}
+
+.command-response {
+  color: var(--term-color-dim);
+  padding-left: 4px;
+}
+
+.command-waiting {
+  padding: 4px 0;
+}
+
+/* ---- GM CONTROLS PANEL ---- */
+.interactive-terminal-gm-panel .window-content {
+  overflow-y: auto;
+}
+
+.gm-controls {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  color: #ddd;
+}
+
+.gm-section {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.gm-section h3 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 6px;
+}
+
+.gm-section h3 i {
+  margin-right: 6px;
+  opacity: 0.7;
+}
+
+.gm-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.gm-label {
+  font-size: 11px;
+  color: #aaa;
+  min-width: 80px;
+}
+
+.gm-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: #ddd;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.gm-input:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+  outline: none;
+}
+
+textarea.gm-input {
+  width: 100%;
+  resize: vertical;
+  margin-bottom: 6px;
+}
+
+.gm-terminal-select {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: #ddd;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.gm-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: #ccc;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.gm-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.gm-btn-full {
+  width: 100%;
+}
+
+.gm-btn-half {
+  flex: 1;
+}
+
+.gm-btn-small {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.gm-btn-danger {
+  border-color: rgba(255, 80, 80, 0.3);
+  color: #ff8888;
+}
+
+.gm-btn-danger:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff5555;
+}
+
+.gm-btn-screen.active {
+  background: rgba(51, 255, 51, 0.15);
+  border-color: rgba(51, 255, 51, 0.3);
+  color: #33ff33;
+}
+
+.gm-btn-theme {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 0;
+}
+
+.gm-btn-theme.theme-green { background: #33ff33; }
+.gm-btn-theme.theme-amber { background: #ffb000; }
+.gm-btn-theme.theme-blue { background: #00d4ff; }
+.gm-btn-theme.theme-white { background: #e0e0e0; }
+
+.gm-btn-theme.active {
+  box-shadow: 0 0 8px currentColor;
+  transform: scale(1.2);
+}
+
+.gm-effects-row {
+  flex-wrap: wrap;
+}
+
+.gm-permission-row {
+  padding: 2px 0;
+}
+
+.gm-permission-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.gm-section-highlight {
+  border-color: rgba(51, 255, 51, 0.3);
+  background: rgba(51, 255, 51, 0.05);
+}
+
+.gm-pending-command {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 176, 0, 0.3);
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+}
+
+.gm-pending-label {
+  color: #ffb000;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.gm-pending-text {
+  display: block;
+  color: #fff;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  margin-top: 2px;
+  word-break: break-all;
+}
+
+.gm-pending-none {
+  font-size: 11px;
+  padding: 4px 0;
+  font-style: italic;
+}
+
+.gm-saved-sequences {
+  margin-bottom: 8px;
+}
+
+.gm-saved-seq-row {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.gm-seq-name {
+  flex: 1;
+  font-size: 12px;
+  color: #ddd;
+}
+
+.sequence-step-row {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  padding: 4px 6px;
+  margin-bottom: 3px;
+}
+
+.sequence-step-row .step-params {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.sequence-step-row .step-action {
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.gm-config-details {
+  margin-top: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.gm-config-details summary {
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  padding: 4px;
+}
+
+.gm-config-details .gm-row {
+  margin-top: 6px;
+}
+
+/* New GM button styles */
+.gm-btn-success {
+  border-color: rgba(51, 255, 51, 0.3);
+  color: #88ff88;
+}
+
+.gm-btn-success:hover {
+  background: rgba(51, 255, 51, 0.15);
+  color: #33ff33;
+}
+
+.gm-btn-active {
+  background: rgba(255, 176, 0, 0.15);
+  border-color: rgba(255, 176, 0, 0.3);
+  color: #ffb000;
+}
+
+/* ---- TERMINAL LOCK OVERLAY ---- */
+.terminal-lock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 250;
+  gap: 16px;
+  color: var(--term-color-dim);
+  font-family: var(--term-font);
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+.terminal-lock-overlay i {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+/* ---- SYSTEM MESSAGE ---- */
+.terminal-system-message {
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-left: 3px solid currentColor;
+  font-weight: bold;
+  animation: systemMessageFade 0.3s ease-out;
+}
+
+@keyframes systemMessageFade {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
