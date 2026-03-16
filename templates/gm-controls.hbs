@@ -148,6 +148,62 @@
   </section>
   {{/if}}
 
+  {{!-- Download Controls --}}
+  {{#if isDownloadScreen}}
+  <section class="gm-section gm-section-highlight">
+    <h3><i class="fas fa-download"></i> {{localize "ITERM.GM.DownloadControls"}}</h3>
+    <div class="gm-row">
+      <button type="button" data-action="download-start" class="gm-btn gm-btn-small gm-btn-success"><i class="fas fa-play"></i> Start</button>
+      <button type="button" data-action="download-pause" class="gm-btn gm-btn-small"><i class="fas fa-pause"></i> Pause</button>
+      <button type="button" data-action="download-resume" class="gm-btn gm-btn-small"><i class="fas fa-play"></i> Resume</button>
+      <button type="button" data-action="download-interrupt" class="gm-btn gm-btn-small gm-btn-danger"><i class="fas fa-exclamation-triangle"></i> Interrupt</button>
+      <button type="button" data-action="download-reset" class="gm-btn gm-btn-small"><i class="fas fa-undo"></i> Reset</button>
+    </div>
+    <div class="gm-row">
+      <label class="gm-label">Set %</label>
+      <input type="number" class="gm-download-progress gm-input" value="0" min="0" max="100" step="5" style="width:70px;" />
+      <button type="button" data-action="download-setProgress" class="gm-btn gm-btn-small">Set</button>
+    </div>
+  </section>
+  {{/if}}
+
+  {{!-- Countdown Controls --}}
+  {{#if isCountdownScreen}}
+  <section class="gm-section gm-section-highlight">
+    <h3><i class="fas fa-hourglass-half"></i> {{localize "ITERM.GM.CountdownControls"}}</h3>
+    <div class="gm-row">
+      <button type="button" data-action="countdown-start" class="gm-btn gm-btn-small gm-btn-success"><i class="fas fa-play"></i> Start</button>
+      <button type="button" data-action="countdown-stop" class="gm-btn gm-btn-small"><i class="fas fa-pause"></i> Stop</button>
+    </div>
+    <div class="gm-row">
+      <label class="gm-label">Duration (s)</label>
+      <input type="number" class="gm-countdown-duration gm-input" value="{{countdownDuration}}" min="10" max="3600" step="10" style="width:80px;" />
+      <button type="button" data-action="countdown-reset" class="gm-btn gm-btn-small"><i class="fas fa-undo"></i> Reset</button>
+    </div>
+    <div class="gm-row">
+      <label class="gm-label">Adjust (s)</label>
+      <input type="number" class="gm-countdown-add gm-input" value="30" min="1" max="600" style="width:70px;" />
+      <button type="button" data-action="countdown-addTime" class="gm-btn gm-btn-small gm-btn-success"><i class="fas fa-plus"></i></button>
+      <button type="button" data-action="countdown-subTime" class="gm-btn gm-btn-small gm-btn-danger"><i class="fas fa-minus"></i></button>
+    </div>
+  </section>
+  {{/if}}
+
+  {{!-- Crash Controls --}}
+  {{#if isCrashScreen}}
+  <section class="gm-section gm-section-highlight">
+    <h3><i class="fas fa-skull-crossbones"></i> {{localize "ITERM.GM.CrashControls"}}</h3>
+    <div class="gm-row gm-effects-row">
+      {{#each crashPresets}}
+      <button type="button" data-action="setCrashPreset" data-preset="{{this.id}}"
+              class="gm-btn gm-btn-small {{#if (eq this.id ../crashPreset)}}gm-btn-active{{/if}}">
+        {{this.label}}
+      </button>
+      {{/each}}
+    </div>
+  </section>
+  {{/if}}
+
   {{!-- Chat NPC Controls --}}
   <section class="gm-section">
     <h3><i class="fas fa-comment"></i> {{localize "ITERM.GM.NpcChat"}}</h3>
@@ -289,6 +345,78 @@
             <option value="chat" {{#if (eq selected.screenConfigs.login.successScreen "chat")}}selected{{/if}}>Chat</option>
             <option value="hacking" {{#if (eq selected.screenConfigs.login.successScreen "hacking")}}selected{{/if}}>Hacking</option>
             <option value="command" {{#if (eq selected.screenConfigs.login.successScreen "command")}}selected{{/if}}>Command</option>
+            <option value="download" {{#if (eq selected.screenConfigs.login.successScreen "download")}}selected{{/if}}>Download</option>
+            <option value="countdown" {{#if (eq selected.screenConfigs.login.successScreen "countdown")}}selected{{/if}}>Countdown</option>
+          </select>
+        </div>
+        <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>
+      </form>
+    </details>
+
+    <details class="gm-config-details">
+      <summary>Download</summary>
+      <form class="screen-config-form">
+        <input type="hidden" name="screenId" value="download" />
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Download.Filename"}}</label>
+          <input type="text" name="filename" class="gm-input" value="{{downloadFilename}}" />
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Download.TotalSize"}}</label>
+          <input type="text" name="totalSize" class="gm-input" value="{{downloadSize}}" />
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Download.Speed"}}</label>
+          <input type="number" name="speed" class="gm-input" value="{{downloadSpeed}}" min="0.5" max="20" step="0.5" style="width:70px;" />
+        </div>
+        <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>
+      </form>
+    </details>
+
+    <details class="gm-config-details">
+      <summary>Countdown</summary>
+      <form class="screen-config-form">
+        <input type="hidden" name="screenId" value="countdown" />
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Countdown.Label"}}</label>
+          <input type="text" name="label" class="gm-input" value="{{countdownLabel}}" />
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Countdown.Duration"}} (s)</label>
+          <input type="number" name="duration" class="gm-input" value="{{countdownDuration}}" min="10" max="3600" step="10" />
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Countdown.OnExpire"}}</label>
+          <select name="expireAction" class="gm-input">
+            <option value="none" {{#if (eq countdownExpireAction "none")}}selected{{/if}}>None</option>
+            <option value="screen" {{#if (eq countdownExpireAction "screen")}}selected{{/if}}>Switch Screen</option>
+            <option value="lock" {{#if (eq countdownExpireAction "lock")}}selected{{/if}}>Lock Terminal</option>
+          </select>
+        </div>
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Countdown.ExpireScreen"}}</label>
+          <select name="expireScreen" class="gm-input">
+            <option value="crash" {{#if (eq countdownExpireScreen "crash")}}selected{{/if}}>Crash</option>
+            <option value="login" {{#if (eq countdownExpireScreen "login")}}selected{{/if}}>Login</option>
+            <option value="boot" {{#if (eq countdownExpireScreen "boot")}}selected{{/if}}>Boot</option>
+          </select>
+        </div>
+        <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>
+      </form>
+    </details>
+
+    <details class="gm-config-details">
+      <summary>Boot</summary>
+      <form class="screen-config-form">
+        <input type="hidden" name="screenId" value="boot" />
+        <div class="gm-row">
+          <label class="gm-label">{{localize "ITERM.Boot.NextScreen"}}</label>
+          <select name="nextScreen" class="gm-input">
+            <option value="login" {{#if (eq bootNextScreen "login")}}selected{{/if}}>Login</option>
+            <option value="chat" {{#if (eq bootNextScreen "chat")}}selected{{/if}}>Chat</option>
+            <option value="command" {{#if (eq bootNextScreen "command")}}selected{{/if}}>Command</option>
+            <option value="hacking" {{#if (eq bootNextScreen "hacking")}}selected{{/if}}>Hacking</option>
+            <option value="download" {{#if (eq bootNextScreen "download")}}selected{{/if}}>Download</option>
           </select>
         </div>
         <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>

@@ -68,6 +68,9 @@ function handleSocketMessage(data) {
     resetScreen:       () => { const t = moduleState.terminals.get(terminalId); if (t) t.resetScreen(payload.screen); },
     playerCommand:     () => { if (!game.user.isGM) return; onPlayerCommand(terminalId, payload); },
     gmResponse:        () => { const t = moduleState.terminals.get(terminalId); if (t) t.currentScreen?.receiveGmResponse?.(payload.text); },
+    downloadControl:   () => { const t = moduleState.terminals.get(terminalId); if (t && t.currentScreen) { const s = t.currentScreen; const a = payload.cmd; if (a === "start") s.start?.(); else if (a === "pause") s.pause?.(); else if (a === "resume") s.resume?.(); else if (a === "interrupt") s.interrupt?.(); else if (a === "reset") s.reset?.(); else if (a === "setProgress") s.setProgress?.(payload.value); } },
+    countdownControl:  () => { const t = moduleState.terminals.get(terminalId); if (t && t.currentScreen) { const s = t.currentScreen; const a = payload.cmd; if (a === "start") s.start?.(); else if (a === "stop") s.stop?.(); else if (a === "reset") s.reset?.(payload.duration); else if (a === "addTime") s.addTime?.(payload.seconds); else if (a === "setTime") s.setTime?.(payload.seconds); } },
+    crashPreset:       () => { const t = moduleState.terminals.get(terminalId); if (t && t.currentScreen?.setPreset) t.currentScreen.setPreset(payload.preset); },
     runMacro:          () => runMacroSequence(terminalId, payload.steps),
     startGlitchLoop:   () => { const t = moduleState.terminals.get(terminalId); if (t) GlitchEffect.startLoop(t.element, payload.type, payload.intervalMs, terminalId); },
     stopGlitchLoop:    () => { GlitchEffect.stopLoop(terminalId); },
@@ -118,6 +121,25 @@ function createNewTerminal() {
         prompt: ">",
         motd: "",
         autoResponses: [],
+      },
+      download: {
+        filename: "DATA_PACKAGE.bin",
+        totalSize: "2.4 GB",
+        speed: 2,
+      },
+      countdown: {
+        duration: 300,
+        label: "TIME REMAINING",
+        expireAction: "none",
+        expireScreen: "crash",
+      },
+      crash: {
+        preset: "bluescreen",
+      },
+      boot: {
+        nextScreen: "login",
+        autoTransition: true,
+        transitionDelay: 1500,
       },
     },
   };

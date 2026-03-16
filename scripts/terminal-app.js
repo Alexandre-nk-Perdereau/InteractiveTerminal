@@ -3,6 +3,10 @@ import { LoginScreen } from "./screens/login-screen.js";
 import { ChatScreen } from "./screens/chat-screen.js";
 import { HackingScreen } from "./screens/hacking-screen.js";
 import { CommandScreen } from "./screens/command-screen.js";
+import { DownloadScreen } from "./screens/download-screen.js";
+import { CountdownScreen } from "./screens/countdown-screen.js";
+import { CrashScreen } from "./screens/crash-screen.js";
+import { BootScreen } from "./screens/boot-screen.js";
 import { GlitchEffect } from "./effects/glitch.js";
 import { SoundManager } from "./effects/sounds.js";
 
@@ -14,7 +18,10 @@ export function getTerminalApplicationClass() {
   const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
   TerminalApplication = class TerminalApplication extends HandlebarsApplicationMixin(ApplicationV2) {
-    static SCREENS = { login: LoginScreen, chat: ChatScreen, hacking: HackingScreen, command: CommandScreen };
+    static SCREENS = {
+      login: LoginScreen, chat: ChatScreen, hacking: HackingScreen, command: CommandScreen,
+      download: DownloadScreen, countdown: CountdownScreen, crash: CrashScreen, boot: BootScreen,
+    };
 
     static DEFAULT_OPTIONS = {
       classes: ["interactive-terminal-app"],

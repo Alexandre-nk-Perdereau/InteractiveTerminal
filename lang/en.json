@@ -77,5 +77,22 @@
   "ITERM.Command.Ready": "Terminal Ready",
   "ITERM.Command.Hostname": "Hostname",
   "ITERM.Command.Prompt": "Prompt",
-  "ITERM.Command.Motd": "Welcome Message"
+  "ITERM.Command.Motd": "Welcome Message",
+
+  "ITERM.GM.DownloadControls": "Download Controls",
+  "ITERM.GM.CountdownControls": "Countdown Controls",
+  "ITERM.GM.CrashControls": "Crash Preset",
+
+  "ITERM.Download.Title": "FILE TRANSFER",
+  "ITERM.Download.Target": "Target",
+  "ITERM.Download.Filename": "Filename",
+  "ITERM.Download.TotalSize": "Total Size",
+  "ITERM.Download.Speed": "Speed",
+
+  "ITERM.Countdown.Label": "Label",
+  "ITERM.Countdown.Duration": "Duration",
+  "ITERM.Countdown.OnExpire": "On Expire",
+  "ITERM.Countdown.ExpireScreen": "Expire Screen",
+
+  "ITERM.Boot.NextScreen": "Next Screen"
 }

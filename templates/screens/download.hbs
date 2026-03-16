@@ -1,0 +1,20 @@
+<div class="screen-download">
+  <div class="download-header">
+    <div class="term-bold">{{localize "ITERM.Download.Title"}}</div>
+    <div class="term-dim">{{localize "ITERM.Download.Target"}}: <span class="term-bold">{{filename}}</span></div>
+  </div>
+
+  <div class="download-progress-container">
+    <div class="download-status term-dim">READY</div>
+    <div class="terminal-progress">
+      <div class="download-progress-bar terminal-progress-bar" style="width: {{progress}}%"></div>
+    </div>
+    <div class="download-info-row">
+      <span class="download-percent">{{progress}}%</span>
+      <span class="download-size-info term-dim">0 / {{totalSize}}</span>
+    </div>
+  </div>
+
+  <div class="download-log screen-output">
+  </div>
+</div>

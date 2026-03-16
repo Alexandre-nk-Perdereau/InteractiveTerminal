@@ -156,6 +156,10 @@ export function getGmControlsApplicationClass() {
           { id: "chat", label: "Chat" },
           { id: "hacking", label: "Hacking" },
           { id: "command", label: "Command" },
+          { id: "download", label: "Download" },
+          { id: "countdown", label: "Countdown" },
+          { id: "crash", label: "Crash" },
+          { id: "boot", label: "Boot" },
         ],
         themes: [
           { id: "green", label: "Green" },
@@ -180,7 +184,34 @@ export function getGmControlsApplicationClass() {
         commandMotd: selected?.screenConfigs?.command?.motd ?? "",
         commandAutoResponses: selected?.screenConfigs?.command?.autoResponses ?? [],
         customSequences: selected?.customSequences ?? [],
+        isDownloadScreen: this._currentScreenId() === "download",
+        isCountdownScreen: this._currentScreenId() === "countdown",
+        isCrashScreen: this._currentScreenId() === "crash",
+        isBootScreen: this._currentScreenId() === "boot",
+        downloadFilename: selected?.screenConfigs?.download?.filename ?? "DATA_PACKAGE.bin",
+        downloadSize: selected?.screenConfigs?.download?.totalSize ?? "2.4 GB",
+        downloadSpeed: selected?.screenConfigs?.download?.speed ?? 2,
+        countdownDuration: selected?.screenConfigs?.countdown?.duration ?? 300,
+        countdownLabel: selected?.screenConfigs?.countdown?.label ?? "TIME REMAINING",
+        countdownExpireAction: selected?.screenConfigs?.countdown?.expireAction ?? "none",
+        countdownExpireScreen: selected?.screenConfigs?.countdown?.expireScreen ?? "crash",
+        crashPresets: [
+          { id: "bluescreen", label: "Fatal Error" },
+          { id: "corruption", label: "Data Corruption" },
+          { id: "intrusion", label: "Security Breach" },
+          { id: "overload", label: "System Overload" },
+        ],
+        crashPreset: selected?.screenConfigs?.crash?.preset ?? "bluescreen",
+        bootNextScreen: selected?.screenConfigs?.boot?.nextScreen ?? "login",
       };
+    }
+
+    _currentScreenId() {
+      if (!this._selectedTerminalId) return null;
+      const terminal = moduleState.terminals.get(this._selectedTerminalId);
+      if (terminal) return terminal.config.screen || null;
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      return terminals[this._selectedTerminalId]?.screen || null;
     }
 
     _onRender() {
@@ -264,13 +295,13 @@ export function getGmControlsApplicationClass() {
 
       // Screen switch
       el.querySelectorAll("[data-action='switchScreen']").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
+        btn.addEventListener("click", async (e) => {
           const terminal = this.selectedTerminal;
           if (!terminal) return;
           const screen = e.currentTarget.dataset.screen;
-          terminal.switchScreen(screen);
-          emitSocket("switchScreen", this._selectedTerminalId, { screen });
           this._updateTerminalConfig({ screen });
+          emitSocket("switchScreen", this._selectedTerminalId, { screen });
+          await terminal.switchScreen(screen);
           this.render();
         });
       });
@@ -412,6 +443,63 @@ export function getGmControlsApplicationClass() {
         });
       });
 
+      // Download controls
+      ["start", "pause", "resume", "interrupt", "reset"].forEach(cmd => {
+        this._on(el, `download-${cmd}`, () => {
+          const t = this._ensureTerminalOpen();
+          if (t?.currentScreen) t.currentScreen[cmd]?.();
+          emitSocket("downloadControl", this._selectedTerminalId, { cmd });
+        });
+      });
+
+      this._on(el, "download-setProgress", () => {
+        const val = parseFloat(el.querySelector(".gm-download-progress")?.value) || 0;
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen) t.currentScreen.setProgress?.(val);
+        emitSocket("downloadControl", this._selectedTerminalId, { cmd: "setProgress", value: val });
+      });
+
+      // Countdown controls
+      ["start", "stop"].forEach(cmd => {
+        this._on(el, `countdown-${cmd}`, () => {
+          const t = this._ensureTerminalOpen();
+          if (t?.currentScreen) t.currentScreen[cmd]?.();
+          emitSocket("countdownControl", this._selectedTerminalId, { cmd });
+        });
+      });
+
+      this._on(el, "countdown-reset", () => {
+        const dur = parseInt(el.querySelector(".gm-countdown-duration")?.value) || 300;
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen) t.currentScreen.reset?.(dur);
+        emitSocket("countdownControl", this._selectedTerminalId, { cmd: "reset", duration: dur });
+      });
+
+      this._on(el, "countdown-addTime", () => {
+        const sec = parseInt(el.querySelector(".gm-countdown-add")?.value) || 30;
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen) t.currentScreen.addTime?.(sec);
+        emitSocket("countdownControl", this._selectedTerminalId, { cmd: "addTime", seconds: sec });
+      });
+
+      this._on(el, "countdown-subTime", () => {
+        const sec = parseInt(el.querySelector(".gm-countdown-add")?.value) || 30;
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen) t.currentScreen.addTime?.(-sec);
+        emitSocket("countdownControl", this._selectedTerminalId, { cmd: "addTime", seconds: -sec });
+      });
+
+      // Crash presets
+      el.querySelectorAll("[data-action='setCrashPreset']").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          const preset = e.currentTarget.dataset.preset;
+          const t = this._ensureTerminalOpen();
+          if (t?.currentScreen?.setPreset) t.currentScreen.setPreset(preset);
+          emitSocket("crashPreset", this._selectedTerminalId, { preset });
+          this._updateTerminalConfig({ screenConfigs: { crash: { preset } } });
+        });
+      });
+
       // Screen config forms
       el.querySelectorAll(".screen-config-form").forEach((form) => {
         form.addEventListener("submit", (e) => { e.preventDefault(); this._saveScreenConfig(form); });
@@ -547,7 +635,7 @@ export function getGmControlsApplicationClass() {
         delay: `<input type="number" class="step-param-ms gm-input" value="500" min="100" max="10000" step="100" style="width:70px;" placeholder="ms" />`,
         glitch: `<select class="step-param-type gm-input">${glitchOpts}</select>`,
         sound: `<select class="step-param-sound gm-input">${soundOpts}</select>`,
-        screen: `<select class="step-param-screen gm-input"><option value="login">Login</option><option value="chat">Chat</option><option value="hacking">Hacking</option><option value="command">Command</option></select>`,
+        screen: `<select class="step-param-screen gm-input"><option value="login">Login</option><option value="chat">Chat</option><option value="hacking">Hacking</option><option value="command">Command</option><option value="download">Download</option><option value="countdown">Countdown</option><option value="crash">Crash</option><option value="boot">Boot</option></select>`,
         message: `<input type="text" class="step-param-text gm-input" placeholder="Message text" style="flex:1;" /><select class="step-param-css gm-input" style="width:80px;"><option value="term-warning">Warn</option><option value="term-error">Error</option><option value="term-success">OK</option><option value="term-info">Info</option></select>`,
         lock: `<select class="step-param-locked gm-input"><option value="true">Lock</option><option value="false">Unlock</option></select>`,
       };

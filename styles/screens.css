@@ -318,6 +318,190 @@
   padding: 4px 0;
 }
 
+/* ---- DOWNLOAD SCREEN ---- */
+.screen-download {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.download-header {
+  margin-bottom: 16px;
+}
+
+.download-progress-container {
+  margin-bottom: 16px;
+}
+
+.download-status {
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.download-info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.download-percent {
+  font-weight: bold;
+  color: var(--term-color);
+}
+
+.download-log {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 11px;
+  border-top: 1px solid var(--term-color-dim);
+  padding-top: 8px;
+}
+
+/* ---- COUNTDOWN SCREEN ---- */
+.screen-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.countdown-container {
+  text-align: center;
+}
+
+.countdown-label {
+  font-size: 14px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.countdown-time {
+  font-size: 96px;
+  font-weight: bold;
+  font-family: var(--term-font);
+  color: var(--term-color);
+  text-shadow: 0 0 20px var(--term-color-glow), 0 0 40px var(--term-color-glow);
+  letter-spacing: 8px;
+  line-height: 1;
+}
+
+.countdown-time.countdown-critical {
+  color: #ff3333;
+  text-shadow: 0 0 20px rgba(255, 51, 51, 0.6), 0 0 40px rgba(255, 51, 51, 0.3);
+  animation: countdownPulse 1s ease-in-out infinite;
+}
+
+.countdown-time.countdown-expired {
+  color: #ff3333;
+  animation: countdownFlash 0.5s steps(2) infinite;
+}
+
+@keyframes countdownPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.02); }
+}
+
+@keyframes countdownFlash {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.countdown-status {
+  margin-top: 16px;
+  font-size: 14px;
+  letter-spacing: 3px;
+}
+
+/* ---- CRASH SCREEN ---- */
+.screen-crash {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px;
+}
+
+.crash-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.crash-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.crash-bluescreen .crash-icon,
+.crash-bluescreen .crash-title {
+  color: #ff3333;
+}
+
+.crash-corruption .crash-icon,
+.crash-corruption .crash-title {
+  color: #ffb000;
+}
+
+.crash-intrusion .crash-icon,
+.crash-intrusion .crash-title {
+  color: #ff3333;
+  animation: crashBlink 1s steps(2) infinite;
+}
+
+.crash-overload .crash-icon,
+.crash-overload .crash-title {
+  color: #ff6600;
+}
+
+@keyframes crashBlink {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.crash-title {
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.crash-code {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.crash-lines {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.crash-line {
+  color: var(--term-color-dim);
+}
+
+.crash-cursor {
+  margin-top: 8px;
+}
+
+/* ---- BOOT SCREEN ---- */
+.screen-boot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.screen-boot .boot-output {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* ---- GM CONTROLS PANEL ---- */
 .interactive-terminal-gm-panel .window-content {
   overflow-y: auto;

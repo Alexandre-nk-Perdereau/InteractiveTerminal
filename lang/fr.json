@@ -77,5 +77,22 @@
   "ITERM.Command.Ready": "Terminal Pret",
   "ITERM.Command.Hostname": "Nom d'hote",
   "ITERM.Command.Prompt": "Prompt",
-  "ITERM.Command.Motd": "Message d'accueil"
+  "ITERM.Command.Motd": "Message d'accueil",
+
+  "ITERM.GM.DownloadControls": "Controles Telechargement",
+  "ITERM.GM.CountdownControls": "Controles Compte a Rebours",
+  "ITERM.GM.CrashControls": "Type de Crash",
+
+  "ITERM.Download.Title": "TRANSFERT DE FICHIER",
+  "ITERM.Download.Target": "Cible",
+  "ITERM.Download.Filename": "Nom du fichier",
+  "ITERM.Download.TotalSize": "Taille totale",
+  "ITERM.Download.Speed": "Vitesse",
+
+  "ITERM.Countdown.Label": "Libelle",
+  "ITERM.Countdown.Duration": "Duree",
+  "ITERM.Countdown.OnExpire": "A l'expiration",
+  "ITERM.Countdown.ExpireScreen": "Ecran d'expiration",
+
+  "ITERM.Boot.NextScreen": "Ecran suivant"
 }
