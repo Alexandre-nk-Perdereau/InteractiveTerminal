@@ -984,53 +984,120 @@ export function getGmControlsApplicationClass() {
       container.innerHTML = "";
       const fs = this._getFbFilesystem();
       this._fbSelectedParentId = "root";
-      this._renderFbNode(container, fs, 0);
+      this._fbCollapsed = this._fbCollapsed || new Set();
+
+      const rootDrop = document.createElement("div");
+      rootDrop.classList.add("gm-fb-drop-root");
+      rootDrop.textContent = "/ (root)";
+      rootDrop.addEventListener("dragover", (e) => { e.preventDefault(); rootDrop.classList.add("gm-fb-drop-hover"); });
+      rootDrop.addEventListener("dragleave", () => rootDrop.classList.remove("gm-fb-drop-hover"));
+      rootDrop.addEventListener("drop", (e) => {
+        e.preventDefault();
+        rootDrop.classList.remove("gm-fb-drop-hover");
+        this._fbDropNode(e.dataTransfer.getData("text/plain"), "root");
+      });
+      rootDrop.addEventListener("click", () => {
+        this._fbSelectedParentId = "root";
+        container.querySelectorAll(".gm-fb-node").forEach((n) => n.classList.remove("gm-fb-node-selected"));
+        rootDrop.classList.add("gm-fb-node-selected");
+        const label = this.element?.querySelector(".gm-fb-target-name");
+        if (label) label.textContent = "/";
+      });
+      container.appendChild(rootDrop);
+
+      if (fs.children?.length) {
+        for (const child of fs.children) this._renderFbNode(container, child, 0);
+      } else {
+        const empty = document.createElement("div");
+        empty.classList.add("gm-fb-empty", "term-dim");
+        empty.textContent = "No files yet";
+        container.appendChild(empty);
+      }
+    }
+
+    _fbDropNode(draggedId, targetFolderId) {
+      if (!draggedId || draggedId === targetFolderId) return;
+      const fs = this._getFbFilesystem();
+      const dragged = this._findNodeById(fs, draggedId);
+      if (!dragged) return;
+      if (dragged.type === "folder" && this._findNodeById(dragged, targetFolderId)) return;
+      const parent = this._findParentNode(fs, draggedId);
+      if (!parent) return;
+      parent.children = parent.children.filter((c) => c.id !== draggedId);
+      const target = this._findNodeById(fs, targetFolderId);
+      if (!target) return;
+      if (!target.children) target.children = [];
+      target.children.push(dragged);
+      this._saveFbFilesystem(fs);
+      this.render();
     }
 
     _renderFbNode(container, node, depth) {
-      if (node.id === "root") {
-        if (node.children) {
-          for (const child of node.children) this._renderFbNode(container, child, depth);
-        }
-        if (!node.children?.length) {
-          const empty = document.createElement("div");
-          empty.classList.add("gm-fb-empty", "term-dim");
-          empty.textContent = "No files yet";
-          container.appendChild(empty);
-        }
-        return;
-      }
-
       const row = document.createElement("div");
       row.classList.add("gm-fb-node");
+      row.dataset.nodeId = node.id;
       if (node.hidden) row.classList.add("gm-fb-node-hidden");
 
-      for (let i = 0; i < depth; i++) {
-        const indent = document.createElement("span");
-        indent.classList.add("gm-fb-indent");
-        row.appendChild(indent);
+      row.draggable = true;
+      row.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("text/plain", node.id);
+        e.dataTransfer.effectAllowed = "move";
+        row.classList.add("gm-fb-dragging");
+      });
+      row.addEventListener("dragend", () => row.classList.remove("gm-fb-dragging"));
+
+      if (node.type === "folder") {
+        row.addEventListener("dragover", (e) => { e.preventDefault(); row.classList.add("gm-fb-drop-hover"); });
+        row.addEventListener("dragleave", () => row.classList.remove("gm-fb-drop-hover"));
+        row.addEventListener("drop", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          row.classList.remove("gm-fb-drop-hover");
+          this._fbDropNode(e.dataTransfer.getData("text/plain"), node.id);
+        });
+      }
+
+      if (depth > 0) {
+        row.style.paddingLeft = `${depth * 20 + 6}px`;
+      }
+
+      if (node.type === "folder") {
+        const collapsed = this._fbCollapsed.has(node.id);
+        const toggle = document.createElement("span");
+        toggle.classList.add("gm-fb-toggle");
+        toggle.innerHTML = `<i class="fas fa-caret-${collapsed ? "right" : "down"}"></i>`;
+        toggle.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (this._fbCollapsed.has(node.id)) this._fbCollapsed.delete(node.id);
+          else this._fbCollapsed.add(node.id);
+          this._renderFbTree();
+        });
+        row.appendChild(toggle);
+      } else {
+        const spacer = document.createElement("span");
+        spacer.classList.add("gm-fb-toggle-spacer");
+        row.appendChild(spacer);
       }
 
       const icon = document.createElement("i");
       const iconClass = node.type === "folder" ? "fa-folder" : node.contentType === "image" ? "fa-image" : "fa-file-alt";
       icon.classList.add("fas", iconClass);
-      icon.style.marginRight = "4px";
-      icon.style.width = "14px";
+      if (node.type === "folder") icon.classList.add("gm-fb-folder-icon");
       row.appendChild(icon);
 
       const name = document.createElement("span");
       name.classList.add("gm-fb-node-name");
       name.textContent = node.name;
-      name.style.cursor = "pointer";
       name.addEventListener("click", () => {
         const targetId = node.type === "folder" ? node.id : (this._findParentNode(this._getFbFilesystem(), node.id)?.id || "root");
         this._fbSelectedParentId = targetId;
-        container.querySelectorAll(".gm-fb-node").forEach((n) => n.classList.remove("gm-fb-node-selected"));
+        const treeEl = this.element?.querySelector(".gm-fb-tree");
+        treeEl?.querySelectorAll(".gm-fb-node, .gm-fb-drop-root").forEach((n) => n.classList.remove("gm-fb-node-selected"));
         row.classList.add("gm-fb-node-selected");
-        const targetLabel = this.element?.querySelector(".gm-fb-target-name");
-        if (targetLabel) {
+        const label = this.element?.querySelector(".gm-fb-target-name");
+        if (label) {
           const targetNode = this._findNodeById(this._getFbFilesystem(), targetId);
-          targetLabel.textContent = targetNode?.id === "root" ? "/" : targetNode?.name || "/";
+          label.textContent = targetNode?.id === "root" ? "/" : targetNode?.name || "/";
         }
       });
       row.appendChild(name);
@@ -1039,48 +1106,32 @@ export function getGmControlsApplicationClass() {
       actions.classList.add("gm-fb-node-actions");
 
       if (node.type === "file") {
-        const editBtn = document.createElement("button");
-        editBtn.classList.add("gm-btn", "gm-btn-tiny");
-        editBtn.innerHTML = '<i class="fas fa-pen"></i>';
-        editBtn.title = "Edit content";
-        editBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbEditContent(node.id); });
-        actions.appendChild(editBtn);
+        actions.appendChild(this._fbBtn("fa-pen", "Edit content", (e) => { e.stopPropagation(); this._fbEditContent(node.id); }));
       }
-
-      const eyeBtn = document.createElement("button");
-      eyeBtn.classList.add("gm-btn", "gm-btn-tiny");
-      eyeBtn.innerHTML = `<i class="fas fa-${node.hidden ? "eye-slash" : "eye"}"></i>`;
-      eyeBtn.title = node.hidden ? "Reveal" : "Hide";
-      eyeBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbToggleHidden(node.id); });
-      actions.appendChild(eyeBtn);
-
-      const moveBtn = document.createElement("button");
-      moveBtn.classList.add("gm-btn", "gm-btn-tiny");
-      moveBtn.innerHTML = '<i class="fas fa-arrows-alt"></i>';
-      moveBtn.title = "Move to folder...";
-      moveBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbMoveNode(node.id); });
-      actions.appendChild(moveBtn);
-
-      const renameBtn = document.createElement("button");
-      renameBtn.classList.add("gm-btn", "gm-btn-tiny");
-      renameBtn.innerHTML = '<i class="fas fa-i-cursor"></i>';
-      renameBtn.title = "Rename";
-      renameBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbRenameNode(node.id); });
-      actions.appendChild(renameBtn);
-
-      const delBtn = document.createElement("button");
-      delBtn.classList.add("gm-btn", "gm-btn-tiny", "gm-btn-danger");
-      delBtn.innerHTML = '<i class="fas fa-trash"></i>';
-      delBtn.title = "Delete";
-      delBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbDeleteNode(node.id); });
-      actions.appendChild(delBtn);
+      actions.appendChild(this._fbBtn(node.hidden ? "fa-eye-slash" : "fa-eye", node.hidden ? "Reveal" : "Hide", (e) => { e.stopPropagation(); this._fbToggleHidden(node.id); }));
+      actions.appendChild(this._fbBtn("fa-i-cursor", "Rename", (e) => { e.stopPropagation(); this._fbRenameNode(node.id); }));
+      actions.appendChild(this._fbBtn("fa-trash", "Delete", (e) => { e.stopPropagation(); this._fbDeleteNode(node.id); }, true));
 
       row.appendChild(actions);
       container.appendChild(row);
 
-      if (node.type === "folder" && node.children) {
-        for (const child of node.children) this._renderFbNode(container, child, depth + 1);
+      if (node.type === "folder" && node.children && !this._fbCollapsed.has(node.id)) {
+        const sorted = [...node.children].sort((a, b) => {
+          if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+        for (const child of sorted) this._renderFbNode(container, child, depth + 1);
       }
+    }
+
+    _fbBtn(iconClass, title, handler, danger = false) {
+      const btn = document.createElement("span");
+      btn.classList.add("gm-fb-action");
+      if (danger) btn.classList.add("gm-fb-action-danger");
+      btn.innerHTML = `<i class="fas ${iconClass}"></i>`;
+      btn.title = title;
+      btn.addEventListener("click", handler);
+      return btn;
     }
 
     async close(options = {}) {
