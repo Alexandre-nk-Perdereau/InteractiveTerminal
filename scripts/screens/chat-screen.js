@@ -3,11 +3,21 @@ import { emitSocket } from "../module.js";
 import { SoundManager } from "../effects/sounds.js";
 
 export class ChatScreen extends BaseScreen {
-  static get screenId() { return "chat"; }
-  static get screenName() { return "Chat"; }
-  get hasInput() { return true; }
-  get inputPlaceholder() { return game.i18n.localize("ITERM.Chat.InputPlaceholder"); }
-  get promptSymbol() { return ">"; }
+  static get screenId() {
+    return "chat";
+  }
+  static get screenName() {
+    return "Chat";
+  }
+  get hasInput() {
+    return true;
+  }
+  get inputPlaceholder() {
+    return game.i18n.localize("ITERM.Chat.InputPlaceholder");
+  }
+  get promptSymbol() {
+    return ">";
+  }
 
   constructor(terminal, config = {}) {
     super(terminal, config);
@@ -51,7 +61,9 @@ export class ChatScreen extends BaseScreen {
 
     if (!game.user.isGM) {
       emitSocket("chatMessage", this.terminal.terminalId, {
-        ...msg, userId: game.user.id, userName: game.user.name,
+        ...msg,
+        userId: game.user.id,
+        userName: game.user.name,
       });
     }
   }
@@ -74,7 +86,12 @@ export class ChatScreen extends BaseScreen {
   }
 
   async _showWelcome() {
-    const msg = { sender: this.npcName, text: game.i18n.localize("ITERM.Chat.WelcomeMessage"), timestamp: Date.now(), isNpc: true };
+    const msg = {
+      sender: this.npcName,
+      text: game.i18n.localize("ITERM.Chat.WelcomeMessage"),
+      timestamp: Date.now(),
+      isNpc: true,
+    };
     this.messages.push(msg);
     await this._renderMessageWithTyping(msg);
   }

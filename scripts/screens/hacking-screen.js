@@ -4,18 +4,45 @@ import { GlitchEffect } from "../effects/glitch.js";
 import { SoundManager } from "../effects/sounds.js";
 
 export class HackingScreen extends BaseScreen {
-  static get screenId() { return "hacking"; }
-  static get screenName() { return "Hacking"; }
-  get hasInput() { return false; }
+  static get screenId() {
+    return "hacking";
+  }
+  static get screenName() {
+    return "Hacking";
+  }
+  get hasInput() {
+    return false;
+  }
 
   static FILLER_CHARS = "!@#$%^&*(){}[]<>?/|\\;:'\",.-_+=~`";
 
   constructor(terminal, config = {}) {
     super(terminal, config);
     this.words = config.words || [
-      "OVERRIDE", "TERMINAL", "NETWORK", "FIREWALL", "ENCRYPT", "SYSTEM", "SECURE", "ACCESS",
-      "COMMAND", "CONTROL", "BREACH", "BYPASS", "CIPHER", "DECODE", "DAEMON", "KERNEL",
-      "PROXY", "REBOOT", "SIGNAL", "STREAM", "BINARY", "PACKET", "SERVER", "MODULE",
+      "OVERRIDE",
+      "TERMINAL",
+      "NETWORK",
+      "FIREWALL",
+      "ENCRYPT",
+      "SYSTEM",
+      "SECURE",
+      "ACCESS",
+      "COMMAND",
+      "CONTROL",
+      "BREACH",
+      "BYPASS",
+      "CIPHER",
+      "DECODE",
+      "DAEMON",
+      "KERNEL",
+      "PROXY",
+      "REBOOT",
+      "SIGNAL",
+      "STREAM",
+      "BINARY",
+      "PACKET",
+      "SERVER",
+      "MODULE",
     ];
     this.correctWord = config.correctWord || this.words[0];
     this.maxAttempts = config.attempts || 4;
@@ -79,7 +106,10 @@ export class HackingScreen extends BaseScreen {
 
         let overlap = false;
         for (let i = 0; i < word.length; i++) {
-          if (placed.has(pos + i)) { overlap = true; break; }
+          if (placed.has(pos + i)) {
+            overlap = true;
+            break;
+          }
         }
         if (overlap) continue;
 
@@ -143,7 +173,9 @@ export class HackingScreen extends BaseScreen {
         this._addLine(output, "> Exact match!", "term-success");
         this._addLine(output, "> Entry granted.", "term-success term-glow");
       }
-      this.element?.querySelectorAll(`.hack-word[data-word="${word}"]`).forEach((el) => el.classList.add("hack-word-correct"));
+      this.element
+        ?.querySelectorAll(`.hack-word[data-word="${word}"]`)
+        .forEach((el) => el.classList.add("hack-word-correct"));
 
       const crt = this.terminal.element?.querySelector(".terminal-crt");
       if (crt) {
@@ -161,7 +193,9 @@ export class HackingScreen extends BaseScreen {
         this._addLine(output, `> ${word}`);
         this._addLine(output, `> Entry denied. Likeness=${likeness}`, "term-error");
       }
-      this.element?.querySelectorAll(`.hack-word[data-word="${word}"]`).forEach((el) => el.classList.add("hack-word-used"));
+      this.element
+        ?.querySelectorAll(`.hack-word[data-word="${word}"]`)
+        .forEach((el) => el.classList.add("hack-word-used"));
       GlitchEffect.trigger(this.terminal.element, "short");
       SoundManager.play("denied");
       if (attemptsEl) attemptsEl.textContent = `${this.attemptsLeft}/${this.maxAttempts}`;

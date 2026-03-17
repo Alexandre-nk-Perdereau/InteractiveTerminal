@@ -6,16 +6,26 @@ export class BaseScreen {
     this.active = false;
   }
 
-  static get screenId() { return "base"; }
-  static get screenName() { return "Base"; }
+  static get screenId() {
+    return "base";
+  }
+  static get screenName() {
+    return "Base";
+  }
 
   get template() {
     return `modules/interactive-terminal/templates/screens/${this.constructor.screenId}.hbs`;
   }
 
-  get hasInput() { return false; }
-  get inputPlaceholder() { return ""; }
-  get promptSymbol() { return ">"; }
+  get hasInput() {
+    return false;
+  }
+  get inputPlaceholder() {
+    return "";
+  }
+  get promptSymbol() {
+    return ">";
+  }
 
   getData() {
     return {

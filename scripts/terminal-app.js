@@ -19,16 +19,26 @@ export function getTerminalApplicationClass() {
 
   TerminalApplication = class TerminalApplication extends HandlebarsApplicationMixin(ApplicationV2) {
     static SCREENS = {
-      login: LoginScreen, chat: ChatScreen, hacking: HackingScreen, command: CommandScreen,
-      download: DownloadScreen, countdown: CountdownScreen, crash: CrashScreen, boot: BootScreen,
+      login: LoginScreen,
+      chat: ChatScreen,
+      hacking: HackingScreen,
+      command: CommandScreen,
+      download: DownloadScreen,
+      countdown: CountdownScreen,
+      crash: CrashScreen,
+      boot: BootScreen,
     };
 
     static DEFAULT_OPTIONS = {
       classes: ["interactive-terminal-app"],
       tag: "div",
       window: {
-        frame: true, positioned: true, title: "Terminal",
-        icon: "fas fa-terminal", minimizable: true, resizable: true,
+        frame: true,
+        positioned: true,
+        title: "Terminal",
+        icon: "fas fa-terminal",
+        minimizable: true,
+        resizable: true,
       },
       position: { width: 700, height: 500 },
       actions: {},
@@ -237,7 +247,9 @@ export function getTerminalApplicationClass() {
   };
 
   TerminalApplication.DEFAULT_OPTIONS.actions = {
-    gmControls: function () { this._onGmControls(); },
+    gmControls: function () {
+      this._onGmControls();
+    },
   };
 
   return TerminalApplication;

@@ -3,9 +3,15 @@ import { SoundManager } from "../effects/sounds.js";
 import { GlitchEffect } from "../effects/glitch.js";
 
 export class CountdownScreen extends BaseScreen {
-  static get screenId() { return "countdown"; }
-  static get screenName() { return "Countdown"; }
-  get hasInput() { return false; }
+  static get screenId() {
+    return "countdown";
+  }
+  static get screenName() {
+    return "Countdown";
+  }
+  get hasInput() {
+    return false;
+  }
 
   constructor(terminal, config = {}) {
     super(terminal, config);

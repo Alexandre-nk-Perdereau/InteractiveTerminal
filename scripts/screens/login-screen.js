@@ -4,9 +4,15 @@ import { GlitchEffect } from "../effects/glitch.js";
 import { SoundManager } from "../effects/sounds.js";
 
 export class LoginScreen extends BaseScreen {
-  static get screenId() { return "login"; }
-  static get screenName() { return "Login"; }
-  get hasInput() { return false; }
+  static get screenId() {
+    return "login";
+  }
+  static get screenName() {
+    return "Login";
+  }
+  get hasInput() {
+    return false;
+  }
 
   constructor(terminal, config = {}) {
     super(terminal, config);

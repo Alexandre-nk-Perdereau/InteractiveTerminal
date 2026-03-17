@@ -1,13 +1,13 @@
 export class GlitchEffect {
   static TYPES = {
-    short:     { class: "glitch-active",      duration: 600 },
-    sustained: { class: "glitch-sustained",   duration: 3000 },
-    colorSplit:{ class: "glitch-color-split",  duration: 1500 },
-    tear:      { class: "glitch-tear",        duration: 500 },
-    static:    { class: "glitch-static",      duration: 3000, needsOverlay: true },
-    flash:     { class: "glitch-flash",       duration: 400, filterOnly: true },
-    roll:      { class: "glitch-roll",        duration: 1200 },
-    interlace: { class: "glitch-interlace",   duration: 2000, needsOverlay: true },
+    short: { class: "glitch-active", duration: 600 },
+    sustained: { class: "glitch-sustained", duration: 3000 },
+    colorSplit: { class: "glitch-color-split", duration: 1500 },
+    tear: { class: "glitch-tear", duration: 500 },
+    static: { class: "glitch-static", duration: 3000, needsOverlay: true },
+    flash: { class: "glitch-flash", duration: 400, filterOnly: true },
+    roll: { class: "glitch-roll", duration: 1200 },
+    interlace: { class: "glitch-interlace", duration: 2000, needsOverlay: true },
   };
 
   static _ensureOverlay(crt) {
@@ -33,7 +33,7 @@ export class GlitchEffect {
     if (def.needsOverlay) GlitchEffect._ensureOverlay(crt);
 
     // filter-only → CRT, overlay-based → CRT (overlay lives there), movement → content
-    const applyTo = (def.filterOnly || def.needsOverlay) ? crt : target;
+    const applyTo = def.filterOnly || def.needsOverlay ? crt : target;
 
     // Flash conflicts with the flicker animation — pause it temporarily
     if (def.filterOnly && crt.classList.contains("flicker")) {
@@ -58,7 +58,7 @@ export class GlitchEffect {
 
   static clearAll(element) {
     if (!element) return;
-    const classes = Object.values(GlitchEffect.TYPES).map(t => t.class);
+    const classes = Object.values(GlitchEffect.TYPES).map((t) => t.class);
     for (const cls of classes) element.classList.remove(cls);
     // Also clear from parent/child in case element is content or crt
     const crt = element.closest?.(".terminal-crt") || element.querySelector?.(".terminal-crt");
@@ -102,9 +102,7 @@ export class GlitchEffect {
       const progress = f / frames;
       let result = "";
       for (let i = 0; i < original.length; i++) {
-        result += i < original.length * progress
-          ? original[i]
-          : chars[Math.floor(Math.random() * chars.length)];
+        result += i < original.length * progress ? original[i] : chars[Math.floor(Math.random() * chars.length)];
       }
       element.textContent = result;
       await new Promise((r) => setTimeout(r, interval));

@@ -53,27 +53,104 @@ function initSocket() {
 function handleSocketMessage(data) {
   const { action, terminalId, payload, userId } = data;
   const handlers = {
-    switchScreen:      () => { const t = moduleState.terminals.get(terminalId); if (t) t.switchScreen(payload.screen); },
-    chatMessage:       () => { const t = moduleState.terminals.get(terminalId); if (t) t.currentScreen?.receiveMessage?.(payload); },
-    updatePermissions: () => { const t = moduleState.terminals.get(terminalId); if (t) t.updatePermissions(payload); },
-    triggerGlitch:     () => { const t = moduleState.terminals.get(terminalId); if (t) GlitchEffect.trigger(t.element, payload.type, payload.duration); },
-    playSound:         () => { if (game.settings.get(MODULE_ID, "enableSounds")) SoundManager.play(payload.sound, payload.volume); },
-    loginAttempt:      () => { if (!game.user.isGM) return; const t = moduleState.terminals.get(terminalId); if (t) t.currentScreen?.processLoginAttempt?.(payload.password, userId); },
-    hackingAction:     () => { if (!game.user.isGM) return; const t = moduleState.terminals.get(terminalId); if (t) t.currentScreen?.processHackingAttempt?.(payload.word, userId); },
-    openTerminal:      () => openTerminal(terminalId, payload),
-    closeTerminal:     () => { const t = moduleState.terminals.get(terminalId); if (t) { t.close(); moduleState.terminals.delete(terminalId); } },
-    updateConfig:      () => { const t = moduleState.terminals.get(terminalId); if (t) t.updateConfig(payload); },
-    lockTerminal:      () => { const t = moduleState.terminals.get(terminalId); if (t) t.setLocked(payload.locked); },
-    systemMessage:     () => { const t = moduleState.terminals.get(terminalId); if (t) t.showSystemMessage(payload.text, payload.cssClass); },
-    resetScreen:       () => { const t = moduleState.terminals.get(terminalId); if (t) t.resetScreen(payload.screen); },
-    playerCommand:     () => { if (!game.user.isGM) return; onPlayerCommand(terminalId, payload); },
-    gmResponse:        () => { const t = moduleState.terminals.get(terminalId); if (t) t.currentScreen?.receiveGmResponse?.(payload.text); },
-    downloadControl:   () => { const t = moduleState.terminals.get(terminalId); if (t && t.currentScreen) { const s = t.currentScreen; const a = payload.cmd; if (a === "start") s.start?.(); else if (a === "pause") s.pause?.(); else if (a === "resume") s.resume?.(); else if (a === "interrupt") s.interrupt?.(); else if (a === "reset") s.reset?.(); else if (a === "setProgress") s.setProgress?.(payload.value); } },
-    countdownControl:  () => { const t = moduleState.terminals.get(terminalId); if (t && t.currentScreen) { const s = t.currentScreen; const a = payload.cmd; if (a === "start") s.start?.(); else if (a === "stop") s.stop?.(); else if (a === "reset") s.reset?.(payload.duration); else if (a === "addTime") s.addTime?.(payload.seconds); else if (a === "setTime") s.setTime?.(payload.seconds); } },
-    crashPreset:       () => { const t = moduleState.terminals.get(terminalId); if (t && t.currentScreen?.setPreset) t.currentScreen.setPreset(payload.preset); },
-    runMacro:          () => runMacroSequence(terminalId, payload.steps),
-    startGlitchLoop:   () => { const t = moduleState.terminals.get(terminalId); if (t) GlitchEffect.startLoop(t.element, payload.type, payload.intervalMs, terminalId); },
-    stopGlitchLoop:    () => { GlitchEffect.stopLoop(terminalId); },
+    switchScreen: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.switchScreen(payload.screen);
+    },
+    chatMessage: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.currentScreen?.receiveMessage?.(payload);
+    },
+    updatePermissions: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.updatePermissions(payload);
+    },
+    triggerGlitch: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) GlitchEffect.trigger(t.element, payload.type, payload.duration);
+    },
+    playSound: () => {
+      if (game.settings.get(MODULE_ID, "enableSounds")) SoundManager.play(payload.sound, payload.volume);
+    },
+    loginAttempt: () => {
+      if (!game.user.isGM) return;
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.currentScreen?.processLoginAttempt?.(payload.password, userId);
+    },
+    hackingAction: () => {
+      if (!game.user.isGM) return;
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.currentScreen?.processHackingAttempt?.(payload.word, userId);
+    },
+    openTerminal: () => openTerminal(terminalId, payload),
+    closeTerminal: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) {
+        t.close();
+        moduleState.terminals.delete(terminalId);
+      }
+    },
+    updateConfig: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.updateConfig(payload);
+    },
+    lockTerminal: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.setLocked(payload.locked);
+    },
+    systemMessage: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.showSystemMessage(payload.text, payload.cssClass);
+    },
+    resetScreen: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.resetScreen(payload.screen);
+    },
+    playerCommand: () => {
+      if (!game.user.isGM) return;
+      onPlayerCommand(terminalId, payload);
+    },
+    gmResponse: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) t.currentScreen?.receiveGmResponse?.(payload.text);
+    },
+    downloadControl: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t && t.currentScreen) {
+        const s = t.currentScreen;
+        const a = payload.cmd;
+        if (a === "start") s.start?.();
+        else if (a === "pause") s.pause?.();
+        else if (a === "resume") s.resume?.();
+        else if (a === "interrupt") s.interrupt?.();
+        else if (a === "reset") s.reset?.();
+        else if (a === "setProgress") s.setProgress?.(payload.value);
+      }
+    },
+    countdownControl: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t && t.currentScreen) {
+        const s = t.currentScreen;
+        const a = payload.cmd;
+        if (a === "start") s.start?.();
+        else if (a === "stop") s.stop?.();
+        else if (a === "reset") s.reset?.(payload.duration);
+        else if (a === "addTime") s.addTime?.(payload.seconds);
+        else if (a === "setTime") s.setTime?.(payload.seconds);
+      }
+    },
+    crashPreset: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t && t.currentScreen?.setPreset) t.currentScreen.setPreset(payload.preset);
+    },
+    runMacro: () => runMacroSequence(terminalId, payload.steps),
+    startGlitchLoop: () => {
+      const t = moduleState.terminals.get(terminalId);
+      if (t) GlitchEffect.startLoop(t.element, payload.type, payload.intervalMs, terminalId);
+    },
+    stopGlitchLoop: () => {
+      GlitchEffect.stopLoop(terminalId);
+    },
   };
   handlers[action]?.();
 }
@@ -109,9 +186,30 @@ function createNewTerminal() {
       chat: { npcName: "SYSTEM", messages: [] },
       hacking: {
         words: [
-          "OVERRIDE", "TERMINAL", "NETWORK", "FIREWALL", "ENCRYPT", "SYSTEM", "SECURE", "ACCESS",
-          "COMMAND", "CONTROL", "BREACH", "BYPASS", "CIPHER", "DECODE", "DAEMON", "KERNEL",
-          "PROXY", "REBOOT", "SIGNAL", "STREAM", "BINARY", "PACKET", "SERVER", "MODULE",
+          "OVERRIDE",
+          "TERMINAL",
+          "NETWORK",
+          "FIREWALL",
+          "ENCRYPT",
+          "SYSTEM",
+          "SECURE",
+          "ACCESS",
+          "COMMAND",
+          "CONTROL",
+          "BREACH",
+          "BYPASS",
+          "CIPHER",
+          "DECODE",
+          "DAEMON",
+          "KERNEL",
+          "PROXY",
+          "REBOOT",
+          "SIGNAL",
+          "STREAM",
+          "BINARY",
+          "PACKET",
+          "SERVER",
+          "MODULE",
         ],
         correctWord: "OVERRIDE",
         attempts: 4,
@@ -298,17 +396,32 @@ Hooks.on("getSceneControlButtons", registerSceneControls);
 // --- Public API ---
 
 globalThis.InteractiveTerminal = {
-  MODULE_ID, state: moduleState,
-  openTerminal, createNewTerminal, deployTerminal, undeployTerminal,
-  openGmPanel, emitSocket, runMacroSequence,
-  getPendingCommands, sendGmResponse, clearPendingCommand,
+  MODULE_ID,
+  state: moduleState,
+  openTerminal,
+  createNewTerminal,
+  deployTerminal,
+  undeployTerminal,
+  openGmPanel,
+  emitSocket,
+  runMacroSequence,
+  getPendingCommands,
+  sendGmResponse,
+  clearPendingCommand,
   onLocalGmCommand,
 };
 
 export {
-  MODULE_ID, moduleState,
-  openTerminal, createNewTerminal, deployTerminal, undeployTerminal,
-  emitSocket, runMacroSequence,
-  getPendingCommands, sendGmResponse, clearPendingCommand,
+  MODULE_ID,
+  moduleState,
+  openTerminal,
+  createNewTerminal,
+  deployTerminal,
+  undeployTerminal,
+  emitSocket,
+  runMacroSequence,
+  getPendingCommands,
+  sendGmResponse,
+  clearPendingCommand,
   onLocalGmCommand,
 };

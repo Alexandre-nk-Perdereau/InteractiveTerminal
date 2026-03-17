@@ -3,9 +3,15 @@ import { SoundManager } from "../effects/sounds.js";
 import { GlitchEffect } from "../effects/glitch.js";
 
 export class BootScreen extends BaseScreen {
-  static get screenId() { return "boot"; }
-  static get screenName() { return "Boot"; }
-  get hasInput() { return false; }
+  static get screenId() {
+    return "boot";
+  }
+  static get screenName() {
+    return "Boot";
+  }
+  get hasInput() {
+    return false;
+  }
 
   static DEFAULT_LINES = [
     { text: "BIOS v2.4.1 ... OK", delay: 80 },
@@ -80,8 +86,8 @@ export class BootScreen extends BaseScreen {
       output.appendChild(line);
       output.scrollTop = output.scrollHeight;
 
-      const delay = entry.delay || (80 + Math.random() * 120);
-      await new Promise(r => setTimeout(r, delay));
+      const delay = entry.delay || 80 + Math.random() * 120;
+      await new Promise((r) => setTimeout(r, delay));
 
       if (entry.glitch) {
         GlitchEffect.trigger(this.terminal.element, entry.glitch);
@@ -95,7 +101,7 @@ export class BootScreen extends BaseScreen {
 
     if (this.autoTransition && this.active) {
       SoundManager.play("success");
-      await new Promise(r => setTimeout(r, this.transitionDelay));
+      await new Promise((r) => setTimeout(r, this.transitionDelay));
       if (this.active) {
         this.terminal.switchScreen(this.nextScreen);
       }

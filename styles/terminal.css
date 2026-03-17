@@ -135,9 +135,15 @@
 }
 
 @keyframes terminalFlicker {
-  0% { opacity: 1; }
-  50% { opacity: calc(1 - var(--term-flicker-intensity)); }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: calc(1 - var(--term-flicker-intensity));
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* Terminal content area */
@@ -239,8 +245,13 @@
 }
 
 @keyframes cursorBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* Text styling */
@@ -275,7 +286,9 @@
 
 /* Text glow effect */
 .term-glow {
-  text-shadow: 0 0 8px var(--term-color-glow), 0 0 16px var(--term-color-glow);
+  text-shadow:
+    0 0 8px var(--term-color-glow),
+    0 0 16px var(--term-color-glow);
 }
 
 /* Boot sequence animation */
@@ -285,7 +298,9 @@
 }
 
 @keyframes bootFadeIn {
-  to { opacity: 1; }
+  to {
+    opacity: 1;
+  }
 }
 
 /* GM controls button overlay */
@@ -385,12 +400,24 @@
   animation: typingDot 1.4s infinite;
 }
 
-.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 @keyframes typingDot {
-  0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
-  30% { opacity: 1; transform: scale(1); }
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* ASCII art pre-formatted */

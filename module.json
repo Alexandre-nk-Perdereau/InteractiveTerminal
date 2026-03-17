@@ -12,14 +12,8 @@
       "name": "Rouge"
     }
   ],
-  "esmodules": [
-    "scripts/module.js"
-  ],
-  "styles": [
-    "styles/terminal.css",
-    "styles/glitch.css",
-    "styles/screens.css"
-  ],
+  "esmodules": ["scripts/module.js"],
+  "styles": ["styles/terminal.css", "styles/glitch.css", "styles/screens.css"],
   "languages": [
     {
       "lang": "en",

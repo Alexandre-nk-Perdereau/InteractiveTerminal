@@ -7,7 +7,7 @@
       <span class="hack-attempts-left">{{attemptsLeft}}/{{maxAttempts}}</span>
       <span class="hack-attempts-blocks">
         {{#each attemptBlocks}}
-        <span class="hack-attempt-block active">&#x2588;</span>
+          <span class="hack-attempt-block active">&#x2588;</span>
         {{/each}}
       </span>
     </div>
@@ -15,22 +15,22 @@
 
   <div class="hack-main">
     <div class="hack-grid">
-      {{!-- Hex dump grid injected by JS --}}
+      {{! Hex dump grid injected by JS }}
     </div>
     <div class="hack-output">
-      {{!-- Attempt results shown here --}}
+      {{! Attempt results shown here }}
     </div>
   </div>
 
   {{#if solved}}
-  <div class="hack-result term-success term-glow">
-    {{localize "ITERM.Hacking.AccessGranted"}}
-  </div>
+    <div class="hack-result term-success term-glow">
+      {{localize "ITERM.Hacking.AccessGranted"}}
+    </div>
   {{/if}}
 
   {{#if locked}}
-  <div class="hack-result term-error term-glow">
-    {{localize "ITERM.Hacking.Locked"}}
-  </div>
+    <div class="hack-result term-error term-glow">
+      {{localize "ITERM.Hacking.Locked"}}
+    </div>
   {{/if}}
 </div>

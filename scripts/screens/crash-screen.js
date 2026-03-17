@@ -3,9 +3,15 @@ import { SoundManager } from "../effects/sounds.js";
 import { GlitchEffect } from "../effects/glitch.js";
 
 export class CrashScreen extends BaseScreen {
-  static get screenId() { return "crash"; }
-  static get screenName() { return "Crash"; }
-  get hasInput() { return false; }
+  static get screenId() {
+    return "crash";
+  }
+  static get screenName() {
+    return "Crash";
+  }
+  get hasInput() {
+    return false;
+  }
 
   static ERROR_PRESETS = {
     bluescreen: {
@@ -114,11 +120,11 @@ export class CrashScreen extends BaseScreen {
       line.textContent = lineText;
       linesContainer.appendChild(line);
       linesContainer.scrollTop = linesContainer.scrollHeight;
-      await new Promise(r => setTimeout(r, 60 + Math.random() * 80));
+      await new Promise((r) => setTimeout(r, 60 + Math.random() * 80));
     }
 
     if (this.active) {
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500));
       const cursor = document.createElement("div");
       cursor.classList.add("crash-cursor");
       cursor.innerHTML = '<span class="cursor-blink"></span>';

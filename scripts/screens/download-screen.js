@@ -3,9 +3,15 @@ import { SoundManager } from "../effects/sounds.js";
 import { GlitchEffect } from "../effects/glitch.js";
 
 export class DownloadScreen extends BaseScreen {
-  static get screenId() { return "download"; }
-  static get screenName() { return "Download"; }
-  get hasInput() { return false; }
+  static get screenId() {
+    return "download";
+  }
+  static get screenName() {
+    return "Download";
+  }
+  get hasInput() {
+    return false;
+  }
 
   constructor(terminal, config = {}) {
     super(terminal, config);
@@ -137,7 +143,7 @@ export class DownloadScreen extends BaseScreen {
     if (pct) pct.textContent = `${Math.floor(this.progress)}%`;
 
     if (sizeInfo) {
-      const downloaded = (parseFloat(this.totalSize) * this.progress / 100).toFixed(1);
+      const downloaded = ((parseFloat(this.totalSize) * this.progress) / 100).toFixed(1);
       const unit = this.totalSize.replace(/[\d.]/g, "").trim();
       sizeInfo.textContent = `${downloaded} / ${this.totalSize}`;
     }
@@ -164,7 +170,7 @@ export class DownloadScreen extends BaseScreen {
     if (!log) return;
     const line = document.createElement("div");
     line.classList.add("terminal-line");
-    if (cssClass) cssClass.split(" ").forEach(c => line.classList.add(c));
+    if (cssClass) cssClass.split(" ").forEach((c) => line.classList.add(c));
     line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
     log.appendChild(line);
     log.scrollTop = log.scrollHeight;

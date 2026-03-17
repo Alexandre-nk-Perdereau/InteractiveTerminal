@@ -3,11 +3,21 @@ import { emitSocket } from "../module.js";
 import { SoundManager } from "../effects/sounds.js";
 
 export class CommandScreen extends BaseScreen {
-  static get screenId() { return "command"; }
-  static get screenName() { return "Command"; }
-  get hasInput() { return true; }
-  get inputPlaceholder() { return this.waiting ? "" : "Enter command..."; }
-  get promptSymbol() { return this.waiting ? "" : this.config.prompt || ">"; }
+  static get screenId() {
+    return "command";
+  }
+  static get screenName() {
+    return "Command";
+  }
+  get hasInput() {
+    return true;
+  }
+  get inputPlaceholder() {
+    return this.waiting ? "" : "Enter command...";
+  }
+  get promptSymbol() {
+    return this.waiting ? "" : this.config.prompt || ">";
+  }
 
   constructor(terminal, config = {}) {
     super(terminal, config);
@@ -54,9 +64,12 @@ export class CommandScreen extends BaseScreen {
     const autoMatch = this._checkAutoResponse(value);
     if (autoMatch) {
       this._startWaiting();
-      setTimeout(() => {
-        this._receiveResponse(autoMatch);
-      }, 300 + Math.random() * 500);
+      setTimeout(
+        () => {
+          this._receiveResponse(autoMatch);
+        },
+        300 + Math.random() * 500,
+      );
       return;
     }
 
@@ -141,7 +154,7 @@ export class CommandScreen extends BaseScreen {
       if (!this.active) return;
       const line = document.createElement("div");
       line.classList.add("terminal-line", "command-response");
-      if (cssClass) cssClass.split(" ").forEach(c => line.classList.add(c));
+      if (cssClass) cssClass.split(" ").forEach((c) => line.classList.add(c));
       output.appendChild(line);
 
       for (let i = 0; i < lineText.length; i++) {
@@ -151,7 +164,7 @@ export class CommandScreen extends BaseScreen {
         }
         line.textContent += lineText[i];
         this._scrollToBottom();
-        await new Promise(r => setTimeout(r, 15 + Math.random() * 20));
+        await new Promise((r) => setTimeout(r, 15 + Math.random() * 20));
       }
       SoundManager.play("keystroke");
     }

@@ -1,17 +1,17 @@
 export class SoundManager {
   static SOUNDS = {
-    keystroke: { label: "Keystroke",  src: null },
-    boot:     { label: "Boot",       src: null },
-    denied:   { label: "Denied",     src: null },
-    granted:  { label: "Granted",    src: null },
-    glitch:   { label: "Glitch",     src: null },
-    beep:     { label: "Beep",       src: null },
-    alarm:    { label: "Alarm",      src: null },
-    ambient:  { label: "Ambiance",   src: null },
-    hacking:  { label: "Hacking",    src: null },
-    success:  { label: "Success",    src: null },
-    error:    { label: "Error",      src: null },
-    typing:   { label: "Typing",     src: null },
+    keystroke: { label: "Keystroke", src: null },
+    boot: { label: "Boot", src: null },
+    denied: { label: "Denied", src: null },
+    granted: { label: "Granted", src: null },
+    glitch: { label: "Glitch", src: null },
+    beep: { label: "Beep", src: null },
+    alarm: { label: "Alarm", src: null },
+    ambient: { label: "Ambiance", src: null },
+    hacking: { label: "Hacking", src: null },
+    success: { label: "Success", src: null },
+    error: { label: "Error", src: null },
+    typing: { label: "Typing", src: null },
   };
 
   static _audioCtx = null;
@@ -42,16 +42,31 @@ export class SoundManager {
 
     const fn = {
       keystroke: () => SoundManager._osc(ctx, gain, now, "square", 800 + Math.random() * 400, 0.05, 0.1),
-      beep:     () => SoundManager._osc(ctx, gain, now, "sine", 1000, 0.15, 0.2),
-      denied:   () => { const o = SoundManager._osc(ctx, gain, now, "sawtooth", 200, 0.4, 0.25); o.frequency.linearRampToValueAtTime(100, now + 0.4); },
-      boot:     () => { const o = SoundManager._osc(ctx, gain, now, "sine", 100, 1, 0.2); o.frequency.exponentialRampToValueAtTime(2000, now + 0.5); o.frequency.exponentialRampToValueAtTime(500, now + 0.8); },
-      glitch:   () => SoundManager._noise(ctx, gain, now, 0.3),
-      error:    () => { SoundManager._osc(ctx, gain, now, "square", 300, 0.15, 0.15); SoundManager._osc(ctx, gain, now + 0.2, "square", 300, 0.15, 0.15); },
-      granted:  () => { [600, 800, 1000].forEach((f, i) => SoundManager._osc(ctx, gain, now + i * 0.12, "sine", f, 0.15, 0.15)); },
-      success:  () => { [523, 659, 784].forEach((f, i) => SoundManager._osc(ctx, gain, now + i * 0.1, "sine", f, 0.2, 0.15)); },
+      beep: () => SoundManager._osc(ctx, gain, now, "sine", 1000, 0.15, 0.2),
+      denied: () => {
+        const o = SoundManager._osc(ctx, gain, now, "sawtooth", 200, 0.4, 0.25);
+        o.frequency.linearRampToValueAtTime(100, now + 0.4);
+      },
+      boot: () => {
+        const o = SoundManager._osc(ctx, gain, now, "sine", 100, 1, 0.2);
+        o.frequency.exponentialRampToValueAtTime(2000, now + 0.5);
+        o.frequency.exponentialRampToValueAtTime(500, now + 0.8);
+      },
+      glitch: () => SoundManager._noise(ctx, gain, now, 0.3),
+      error: () => {
+        SoundManager._osc(ctx, gain, now, "square", 300, 0.15, 0.15);
+        SoundManager._osc(ctx, gain, now + 0.2, "square", 300, 0.15, 0.15);
+      },
+      granted: () => {
+        [600, 800, 1000].forEach((f, i) => SoundManager._osc(ctx, gain, now + i * 0.12, "sine", f, 0.15, 0.15));
+      },
+      success: () => {
+        [523, 659, 784].forEach((f, i) => SoundManager._osc(ctx, gain, now + i * 0.1, "sine", f, 0.2, 0.15));
+      },
     }[type];
 
-    if (fn) fn(); else SoundManager._osc(ctx, gain, now, "sine", 1000, 0.15, 0.2);
+    if (fn) fn();
+    else SoundManager._osc(ctx, gain, now, "sine", 1000, 0.15, 0.2);
   }
 
   static _osc(ctx, gain, time, type, freq, dur, vol) {

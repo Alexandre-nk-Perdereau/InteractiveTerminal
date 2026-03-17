@@ -1,8 +1,13 @@
 import {
-  MODULE_ID, moduleState, emitSocket,
-  createNewTerminal, deployTerminal, undeployTerminal,
+  MODULE_ID,
+  moduleState,
+  emitSocket,
+  createNewTerminal,
+  deployTerminal,
+  undeployTerminal,
   runMacroSequence,
-  getPendingCommands, sendGmResponse,
+  getPendingCommands,
+  sendGmResponse,
 } from "./module.js";
 import { GlitchEffect } from "./effects/glitch.js";
 import { SoundManager } from "./effects/sounds.js";
@@ -138,11 +143,13 @@ export function getGmControlsApplicationClass() {
       }));
 
       const selected = this._selectedTerminalId ? terminals[this._selectedTerminalId] : null;
-      const players = game.users.filter((u) => !u.isGM).map((u) => ({
-        id: u.id,
-        name: u.name,
-        permitted: selected?.permissions?.[u.id] ?? true,
-      }));
+      const players = game.users
+        .filter((u) => !u.isGM)
+        .map((u) => ({
+          id: u.id,
+          name: u.name,
+          permitted: selected?.permissions?.[u.id] ?? true,
+        }));
 
       return {
         terminals: terminalList,
@@ -168,17 +175,20 @@ export function getGmControlsApplicationClass() {
           { id: "white", label: "White" },
         ],
         glitchTypes: Object.keys(GlitchEffect.TYPES).map((t) => ({
-          id: t, label: t.charAt(0).toUpperCase() + t.slice(1),
+          id: t,
+          label: t.charAt(0).toUpperCase() + t.slice(1),
         })),
         soundTypes: Object.keys(SoundManager.SOUNDS).map((s) => ({
-          id: s, label: SoundManager.SOUNDS[s].label,
+          id: s,
+          label: SoundManager.SOUNDS[s].label,
         })),
         hackingWords: selected?.screenConfigs?.hacking?.words?.join(",") ?? "",
         isTerminalOpen: moduleState.terminals.has(this._selectedTerminalId),
         pendingCommands: this._selectedTerminalId ? getPendingCommands(this._selectedTerminalId) : [],
-        isCommandScreen: selected?.screen === "command"
-          || (this._selectedTerminalId && getPendingCommands(this._selectedTerminalId).length > 0)
-          || moduleState.terminals.get(this._selectedTerminalId)?.currentScreen?.constructor?.screenId === "command",
+        isCommandScreen:
+          selected?.screen === "command" ||
+          (this._selectedTerminalId && getPendingCommands(this._selectedTerminalId).length > 0) ||
+          moduleState.terminals.get(this._selectedTerminalId)?.currentScreen?.constructor?.screenId === "command",
         commandHostname: selected?.screenConfigs?.command?.hostname ?? "SYSTEM",
         commandPrompt: selected?.screenConfigs?.command?.prompt ?? ">",
         commandMotd: selected?.screenConfigs?.command?.motd ?? "",
@@ -284,7 +294,10 @@ export function getGmControlsApplicationClass() {
         });
         if (!confirmed) return;
         const terminal = moduleState.terminals.get(this._selectedTerminalId);
-        if (terminal) { terminal.close(); moduleState.terminals.delete(this._selectedTerminalId); }
+        if (terminal) {
+          terminal.close();
+          moduleState.terminals.delete(this._selectedTerminalId);
+        }
         emitSocket("closeTerminal", this._selectedTerminalId);
         const terminals = game.settings.get(MODULE_ID, "terminals");
         delete terminals[this._selectedTerminalId];
@@ -357,7 +370,10 @@ export function getGmControlsApplicationClass() {
       if (sendNpcBtn) sendNpcBtn.addEventListener("click", () => this._sendNpcMessage());
       if (npcTextarea) {
         npcTextarea.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this._sendNpcMessage(); }
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            this._sendNpcMessage();
+          }
         });
       }
 
@@ -419,7 +435,10 @@ export function getGmControlsApplicationClass() {
       if (sendResponseBtn) sendResponseBtn.addEventListener("click", () => this._sendCommandResponse());
       if (responseTextarea) {
         responseTextarea.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this._sendCommandResponse(); }
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            this._sendCommandResponse();
+          }
         });
       }
 
@@ -444,7 +463,7 @@ export function getGmControlsApplicationClass() {
       });
 
       // Download controls
-      ["start", "pause", "resume", "interrupt", "reset"].forEach(cmd => {
+      ["start", "pause", "resume", "interrupt", "reset"].forEach((cmd) => {
         this._on(el, `download-${cmd}`, () => {
           const t = this._ensureTerminalOpen();
           if (t?.currentScreen) t.currentScreen[cmd]?.();
@@ -460,7 +479,7 @@ export function getGmControlsApplicationClass() {
       });
 
       // Countdown controls
-      ["start", "stop"].forEach(cmd => {
+      ["start", "stop"].forEach((cmd) => {
         this._on(el, `countdown-${cmd}`, () => {
           const t = this._ensureTerminalOpen();
           if (t?.currentScreen) t.currentScreen[cmd]?.();
@@ -490,7 +509,7 @@ export function getGmControlsApplicationClass() {
       });
 
       // Crash presets
-      el.querySelectorAll("[data-action='setCrashPreset']").forEach(btn => {
+      el.querySelectorAll("[data-action='setCrashPreset']").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const preset = e.currentTarget.dataset.preset;
           const t = this._ensureTerminalOpen();
@@ -502,7 +521,10 @@ export function getGmControlsApplicationClass() {
 
       // Screen config forms
       el.querySelectorAll(".screen-config-form").forEach((form) => {
-        form.addEventListener("submit", (e) => { e.preventDefault(); this._saveScreenConfig(form); });
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          this._saveScreenConfig(form);
+        });
       });
     }
 
@@ -531,7 +553,10 @@ export function getGmControlsApplicationClass() {
         chatScreen.sendNpcMessage(text, npcName);
       } else {
         emitSocket("chatMessage", this._selectedTerminalId, {
-          sender: npcName, text, timestamp: Date.now(), isNpc: true,
+          sender: npcName,
+          text,
+          timestamp: Date.now(),
+          isNpc: true,
         });
       }
       textarea.value = "";
@@ -546,7 +571,10 @@ export function getGmControlsApplicationClass() {
       for (const [key, value] of formData.entries()) {
         if (key === "screenId") continue;
         if (key === "words") {
-          config[key] = value.split(",").map((w) => w.trim().toUpperCase()).filter(Boolean);
+          config[key] = value
+            .split(",")
+            .map((w) => w.trim().toUpperCase())
+            .filter(Boolean);
         } else if (key === "attempts" || key === "maxAttempts") {
           config[key] = parseInt(value) || 4;
         } else {
@@ -623,14 +651,20 @@ export function getGmControlsApplicationClass() {
       container.appendChild(row);
       const select = row.querySelector(".step-action");
       select.addEventListener("change", () => this._updateStepParams(row));
-      row.querySelector(".step-remove").addEventListener("click", () => { row.remove(); });
+      row.querySelector(".step-remove").addEventListener("click", () => {
+        row.remove();
+      });
     }
 
     _updateStepParams(row) {
       const action = row.querySelector(".step-action").value;
       const paramsEl = row.querySelector(".step-params");
-      const glitchOpts = Object.keys(GlitchEffect.TYPES).map(t => `<option value="${t}">${t}</option>`).join("");
-      const soundOpts = Object.keys(SoundManager.SOUNDS).map(s => `<option value="${s}">${SoundManager.SOUNDS[s].label}</option>`).join("");
+      const glitchOpts = Object.keys(GlitchEffect.TYPES)
+        .map((t) => `<option value="${t}">${t}</option>`)
+        .join("");
+      const soundOpts = Object.keys(SoundManager.SOUNDS)
+        .map((s) => `<option value="${s}">${SoundManager.SOUNDS[s].label}</option>`)
+        .join("");
       const paramHtml = {
         delay: `<input type="number" class="step-param-ms gm-input" value="500" min="100" max="10000" step="100" style="width:70px;" placeholder="ms" />`,
         glitch: `<select class="step-param-type gm-input">${glitchOpts}</select>`,
@@ -660,9 +694,15 @@ export function getGmControlsApplicationClass() {
       if (!this._selectedTerminalId) return;
       const nameInput = this.element.querySelector(".custom-sequence-name");
       const name = nameInput?.value?.trim();
-      if (!name) { ui.notifications.warn("Enter a name for the sequence"); return; }
+      if (!name) {
+        ui.notifications.warn("Enter a name for the sequence");
+        return;
+      }
       const steps = this._getSequenceStepsFromDom();
-      if (steps.length === 0) { ui.notifications.warn("Add at least one step"); return; }
+      if (steps.length === 0) {
+        ui.notifications.warn("Add at least one step");
+        return;
+      }
       const terminals = game.settings.get(MODULE_ID, "terminals");
       const config = terminals[this._selectedTerminalId];
       if (!config) return;

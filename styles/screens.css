@@ -385,14 +385,18 @@
   font-weight: bold;
   font-family: var(--term-font);
   color: var(--term-color);
-  text-shadow: 0 0 20px var(--term-color-glow), 0 0 40px var(--term-color-glow);
+  text-shadow:
+    0 0 20px var(--term-color-glow),
+    0 0 40px var(--term-color-glow);
   letter-spacing: 8px;
   line-height: 1;
 }
 
 .countdown-time.countdown-critical {
   color: #ff3333;
-  text-shadow: 0 0 20px rgba(255, 51, 51, 0.6), 0 0 40px rgba(255, 51, 51, 0.3);
+  text-shadow:
+    0 0 20px rgba(255, 51, 51, 0.6),
+    0 0 40px rgba(255, 51, 51, 0.3);
   animation: countdownPulse 1s ease-in-out infinite;
 }
 
@@ -402,13 +406,24 @@
 }
 
 @keyframes countdownPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.02); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
 }
 
 @keyframes countdownFlash {
-  0% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .countdown-status {
@@ -457,8 +472,12 @@
 }
 
 @keyframes crashBlink {
-  0% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .crash-title {
@@ -637,10 +656,18 @@ textarea.gm-input {
   font-size: 0;
 }
 
-.gm-btn-theme.theme-green { background: #33ff33; }
-.gm-btn-theme.theme-amber { background: #ffb000; }
-.gm-btn-theme.theme-blue { background: #00d4ff; }
-.gm-btn-theme.theme-white { background: #e0e0e0; }
+.gm-btn-theme.theme-green {
+  background: #33ff33;
+}
+.gm-btn-theme.theme-amber {
+  background: #ffb000;
+}
+.gm-btn-theme.theme-blue {
+  background: #00d4ff;
+}
+.gm-btn-theme.theme-white {
+  background: #e0e0e0;
+}
 
 .gm-btn-theme.active {
   box-shadow: 0 0 8px currentColor;
@@ -801,6 +828,12 @@ textarea.gm-input {
 }
 
 @keyframes systemMessageFade {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
