@@ -71,14 +71,12 @@ function handleSocketMessage(data) {
       if (game.settings.get(MODULE_ID, "enableSounds")) SoundManager.play(payload.sound, payload.volume);
     },
 
-    // Player sends login attempt -> GM validates and broadcasts result
     loginAttempt: () => {
       if (!game.user.isGM) return;
       const terminals = game.settings.get(MODULE_ID, "terminals");
       const config = terminals[terminalId];
       const correct = payload.password === config?.screenConfigs?.login?.password;
       emitSocket("loginResult", terminalId, { correct, userId });
-      // Also apply locally on GM
       if (t) t.currentScreen?.showResult?.(correct);
       if (correct) {
         const successScreen = config?.screenConfigs?.login?.successScreen || "chat";
@@ -88,57 +86,46 @@ function handleSocketMessage(data) {
         }, 2500);
       }
     },
-    // Broadcast login result to players
     loginResult: () => {
       if (game.user.isGM) return;
       if (t) t.currentScreen?.showResult?.(payload.correct);
-      // If correct, the GM already broadcasted switchScreen separately
     },
 
-    // Player sends hacking attempt -> GM validates and broadcasts
     hackingAttempt: () => {
       if (!game.user.isGM) return;
-      // Broadcast to all clients so everyone sees the attempt
       emitSocket("hackingResult", terminalId, { word: payload.word, userId });
-      // Apply locally on GM
       if (t) t.currentScreen?.processRemoteAttempt?.(payload.word);
     },
     hackingResult: () => {
-      // The player who sent it already applied locally, GM already applied in hackingAttempt handler
+      // Skip: sender already applied locally, GM already applied in hackingAttempt handler
       if (game.user.isGM || game.user.id === payload.userId) return;
       if (t) t.currentScreen?.processRemoteAttempt?.(payload.word);
     },
 
-    // Player sends command -> GM gets notified, writes response, broadcasts
     playerCommand: () => {
       if (!game.user.isGM) return;
       onPlayerCommand(terminalId, payload);
-      // Also show the player's command on the GM's terminal command screen
       if (t?.currentScreen?.appendRemoteCommand) {
         t.currentScreen.appendRemoteCommand(payload.command, payload.userName);
       }
     },
     gmResponse: () => {
-      // GM already applied locally in sendGmResponse, skip to avoid duplication
+      // Skip: GM already applied locally in sendGmResponse
       if (game.user.isGM) return;
       if (t) t.currentScreen?.receiveGmResponse?.(payload.text);
     },
 
-    // Player sends chat -> GM broadcasts to all
     playerChat: () => {
       if (!game.user.isGM) return;
       const msg = { sender: payload.userName || "USER", text: payload.text, timestamp: Date.now(), isUser: true };
-      // Broadcast to all clients including GM
       emitSocket("chatBroadcast", terminalId, msg);
-      // Also show locally on GM
       if (t) t.currentScreen?.receiveMessage?.(msg);
     },
     chatBroadcast: () => {
-      // GM already applied locally in playerChat handler, skip to avoid duplication
+      // Skip: GM already applied locally in playerChat handler
       if (game.user.isGM) return;
       if (t) t.currentScreen?.receiveMessage?.(payload);
     },
-    // GM sends NPC message (already broadcast by GM)
     chatMessage: () => {
       if (t) t.currentScreen?.receiveMessage?.(payload);
     },
@@ -194,6 +181,28 @@ function handleSocketMessage(data) {
     },
     stopGlitchLoop: () => {
       GlitchEffect.stopLoop(terminalId);
+    },
+
+    fileBrowserNavigate: () => {
+      if (game.user.isGM) {
+        const terminals = game.settings.get(MODULE_ID, "terminals");
+        if (terminals[terminalId]?.screenConfigs?.fileBrowser) {
+          terminals[terminalId].screenConfigs.fileBrowser.currentPath = payload.currentPath;
+          terminals[terminalId].screenConfigs.fileBrowser.openFile = payload.openFile;
+          game.settings.set(MODULE_ID, "terminals", terminals);
+        }
+      }
+      if (game.user.id === userId) return;
+      if (t?.currentScreen?.receiveNavigate) t.currentScreen.receiveNavigate(payload);
+    },
+    fileBrowserReveal: () => {
+      if (t?.currentScreen?.receiveReveal) t.currentScreen.receiveReveal(payload);
+    },
+    fileBrowserEdit: () => {
+      if (t?.currentScreen?.receiveFilesystemUpdate) t.currentScreen.receiveFilesystemUpdate(payload);
+    },
+    fileBrowserLockNav: () => {
+      if (t?.currentScreen?.receiveNavigationLock) t.currentScreen.receiveNavigationLock(payload);
     },
   };
   handlers[action]?.();
@@ -283,6 +292,18 @@ function createNewTerminal() {
         autoTransition: true,
         transitionDelay: 1500,
       },
+      fileBrowser: {
+        filesystem: {
+          id: "root",
+          name: "root",
+          type: "folder",
+          hidden: false,
+          children: [],
+        },
+        currentPath: [],
+        openFile: null,
+        navigationLocked: false,
+      },
     },
   };
 
@@ -366,7 +387,6 @@ function onPlayerCommand(terminalId, payload) {
     userName: payload.userName,
     timestamp: Date.now(),
   });
-  // Notify GM visually
   ui.notifications.info(`Terminal command from ${payload.userName}: ${payload.command}`);
   if (moduleState.gmControls) moduleState.gmControls.render();
 }
@@ -384,10 +404,8 @@ function clearPendingCommand(terminalId, index = 0) {
 }
 
 function sendGmResponse(terminalId, text) {
-  // Apply locally on GM terminal
   const terminal = moduleState.terminals.get(terminalId);
   if (terminal) terminal.currentScreen?.receiveGmResponse?.(text);
-  // Broadcast to all players
   emitSocket("gmResponse", terminalId, { text });
   clearPendingCommand(terminalId);
   if (moduleState.gmControls) moduleState.gmControls.render();

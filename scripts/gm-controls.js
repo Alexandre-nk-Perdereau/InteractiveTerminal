@@ -167,6 +167,7 @@ export function getGmControlsApplicationClass() {
           { id: "countdown", label: "Countdown" },
           { id: "crash", label: "Crash" },
           { id: "boot", label: "Boot" },
+          { id: "fileBrowser", label: "Files" },
         ],
         themes: [
           { id: "green", label: "Green" },
@@ -213,6 +214,8 @@ export function getGmControlsApplicationClass() {
         ],
         crashPreset: selected?.screenConfigs?.crash?.preset ?? "bluescreen",
         bootNextScreen: selected?.screenConfigs?.boot?.nextScreen ?? "login",
+        isFileBrowserScreen: this._currentScreenId() === "fileBrowser",
+        fileBrowserNavLocked: selected?.screenConfigs?.fileBrowser?.navigationLocked ?? false,
       };
     }
 
@@ -227,20 +230,17 @@ export function getGmControlsApplicationClass() {
     _onRender() {
       const el = this.element;
 
-      // Terminal select
       el.querySelector(".gm-terminal-select")?.addEventListener("change", (e) => {
         this._selectedTerminalId = e.target.value || null;
         this.render();
       });
 
-      // Create terminal
       this._on(el, "createTerminal", () => {
         const id = createNewTerminal();
         this._selectedTerminalId = id;
         this.render();
       });
 
-      // Save title
       this._on(el, "saveTitle", () => {
         const title = el.querySelector(".gm-terminal-title")?.value?.trim();
         if (!title || !this._selectedTerminalId) return;
@@ -251,14 +251,12 @@ export function getGmControlsApplicationClass() {
         ui.notifications.info("Title updated");
       });
 
-      // Preview (open locally for GM)
       this._on(el, "previewTerminal", () => {
         if (!this._selectedTerminalId) return;
         const config = game.settings.get(MODULE_ID, "terminals")[this._selectedTerminalId];
         if (config) InteractiveTerminal.openTerminal(this._selectedTerminalId, config);
       });
 
-      // Deploy
       this._on(el, "deployTerminal", () => {
         if (!this._selectedTerminalId) return;
         deployTerminal(this._selectedTerminalId);
@@ -266,7 +264,6 @@ export function getGmControlsApplicationClass() {
         ui.notifications.info("Terminal deployed to players");
       });
 
-      // Undeploy
       this._on(el, "undeployTerminal", () => {
         if (!this._selectedTerminalId) return;
         undeployTerminal(this._selectedTerminalId);
@@ -274,7 +271,6 @@ export function getGmControlsApplicationClass() {
         ui.notifications.info("Terminal hidden from players");
       });
 
-      // Lock/Unlock
       this._on(el, "toggleLock", () => {
         const terminal = this.selectedTerminal;
         if (!terminal) return;
@@ -285,7 +281,6 @@ export function getGmControlsApplicationClass() {
         this.render();
       });
 
-      // Delete
       this._on(el, "deleteTerminal", async () => {
         if (!this._selectedTerminalId) return;
         const confirmed = await foundry.applications.api.DialogV2.confirm({
@@ -306,7 +301,6 @@ export function getGmControlsApplicationClass() {
         this.render();
       });
 
-      // Screen switch
       el.querySelectorAll("[data-action='switchScreen']").forEach((btn) => {
         btn.addEventListener("click", async (e) => {
           const terminal = this.selectedTerminal;
@@ -319,7 +313,6 @@ export function getGmControlsApplicationClass() {
         });
       });
 
-      // Reset screen
       this._on(el, "resetScreen", () => {
         const terminal = this.selectedTerminal;
         if (!terminal) return;
@@ -328,7 +321,6 @@ export function getGmControlsApplicationClass() {
         ui.notifications.info("Screen reset");
       });
 
-      // Theme
       el.querySelectorAll("[data-action='changeTheme']").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const terminal = this.selectedTerminal;
@@ -340,7 +332,6 @@ export function getGmControlsApplicationClass() {
         });
       });
 
-      // Permissions
       this._on(el, "updatePermissions", () => {
         const terminal = this.selectedTerminal;
         if (!terminal) return;
@@ -353,7 +344,6 @@ export function getGmControlsApplicationClass() {
         this._updateTerminalConfig({ permissions });
       });
 
-      // System message
       this._on(el, "sendSystemMessage", () => {
         const terminal = this._ensureTerminalOpen();
         const text = el.querySelector(".gm-system-message")?.value?.trim();
@@ -364,7 +354,6 @@ export function getGmControlsApplicationClass() {
         el.querySelector(".gm-system-message").value = "";
       });
 
-      // NPC message
       const sendNpcBtn = el.querySelector("[data-action='sendNpcMessage']");
       const npcTextarea = el.querySelector(".gm-npc-message");
       if (sendNpcBtn) sendNpcBtn.addEventListener("click", () => this._sendNpcMessage());
@@ -377,7 +366,6 @@ export function getGmControlsApplicationClass() {
         });
       }
 
-      // Glitch buttons
       el.querySelectorAll("[data-action='triggerGlitch']").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const terminal = this._ensureTerminalOpen();
@@ -387,7 +375,6 @@ export function getGmControlsApplicationClass() {
         });
       });
 
-      // Glitch loop
       this._on(el, "startGlitchLoop", () => {
         const terminal = this._ensureTerminalOpen();
         const type = el.querySelector(".gm-loop-glitch-type")?.value || "short";
@@ -406,7 +393,6 @@ export function getGmControlsApplicationClass() {
         ui.notifications.info("Glitch loop stopped");
       });
 
-      // Sound buttons
       el.querySelectorAll("[data-action='playSound']").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const sound = e.currentTarget.dataset.sound;
@@ -415,7 +401,6 @@ export function getGmControlsApplicationClass() {
         });
       });
 
-      // Macro buttons
       el.querySelectorAll("[data-action='runMacro']").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           if (!this._selectedTerminalId) return;
@@ -424,12 +409,10 @@ export function getGmControlsApplicationClass() {
           const steps = PRESET_MACROS[macroName];
           if (!steps) return;
           runMacroSequence(this._selectedTerminalId, steps);
-          // Also broadcast to players
           emitSocket("runMacro", this._selectedTerminalId, { steps });
         });
       });
 
-      // GM Command Response
       const sendResponseBtn = el.querySelector("[data-action='sendGmResponse']");
       const responseTextarea = el.querySelector(".gm-command-response");
       if (sendResponseBtn) sendResponseBtn.addEventListener("click", () => this._sendCommandResponse());
@@ -442,7 +425,6 @@ export function getGmControlsApplicationClass() {
         });
       }
 
-      // Custom sequence editor
       this._on(el, "addSequenceStep", () => this._addSequenceStep());
       this._on(el, "removeLastStep", () => this._removeLastStep());
       this._on(el, "runCustomSequence", () => this._runCustomSequence());
@@ -462,7 +444,6 @@ export function getGmControlsApplicationClass() {
         });
       });
 
-      // Download controls
       ["start", "pause", "resume", "interrupt", "reset"].forEach((cmd) => {
         this._on(el, `download-${cmd}`, () => {
           const t = this._ensureTerminalOpen();
@@ -478,7 +459,6 @@ export function getGmControlsApplicationClass() {
         emitSocket("downloadControl", this._selectedTerminalId, { cmd: "setProgress", value: val });
       });
 
-      // Countdown controls
       ["start", "stop"].forEach((cmd) => {
         this._on(el, `countdown-${cmd}`, () => {
           const t = this._ensureTerminalOpen();
@@ -508,7 +488,6 @@ export function getGmControlsApplicationClass() {
         emitSocket("countdownControl", this._selectedTerminalId, { cmd: "addTime", seconds: -sec });
       });
 
-      // Crash presets
       el.querySelectorAll("[data-action='setCrashPreset']").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const preset = e.currentTarget.dataset.preset;
@@ -519,13 +498,35 @@ export function getGmControlsApplicationClass() {
         });
       });
 
-      // Screen config forms
       el.querySelectorAll(".screen-config-form").forEach((form) => {
         form.addEventListener("submit", (e) => {
           e.preventDefault();
           this._saveScreenConfig(form);
         });
       });
+
+      this._on(el, "fb-lockNav", () => {
+        const locked = !this._getFbConfig().navigationLocked;
+        this._updateFbConfig({ navigationLocked: locked });
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen?.receiveNavigationLock) t.currentScreen.receiveNavigationLock({ locked });
+        emitSocket("fileBrowserLockNav", this._selectedTerminalId, { locked });
+        this.render();
+      });
+
+      this._on(el, "fb-forceHome", () => {
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen?.receiveNavigate) t.currentScreen.receiveNavigate({ currentPath: [], openFile: null });
+        emitSocket("fileBrowserNavigate", this._selectedTerminalId, { currentPath: [], openFile: null });
+        this._updateFbConfig({ currentPath: [], openFile: null });
+      });
+
+      this._on(el, "fb-addFolder", () => this._fbAddNode("folder"));
+      this._on(el, "fb-addFile", () => this._fbAddNode("file"));
+
+      if (el.querySelector(".gm-fb-tree")) {
+        this._renderFbTree();
+      }
     }
 
     _on(container, actionName, handler) {
@@ -732,6 +733,354 @@ export function getGmControlsApplicationClass() {
       config.customSequences.splice(index, 1);
       game.settings.set(MODULE_ID, "terminals", terminals);
       this.render();
+    }
+
+    // --- File Browser helpers ---
+
+    _getFbConfig() {
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      return terminals[this._selectedTerminalId]?.screenConfigs?.fileBrowser || {};
+    }
+
+    _updateFbConfig(partial) {
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      const config = terminals[this._selectedTerminalId];
+      if (!config) return;
+      config.screenConfigs = config.screenConfigs || {};
+      config.screenConfigs.fileBrowser = config.screenConfigs.fileBrowser || {};
+      Object.assign(config.screenConfigs.fileBrowser, partial);
+      game.settings.set(MODULE_ID, "terminals", terminals);
+    }
+
+    _getFbFilesystem() {
+      return this._getFbConfig().filesystem || { id: "root", name: "root", type: "folder", hidden: false, children: [] };
+    }
+
+    _saveFbFilesystem(fs) {
+      this._updateFbConfig({ filesystem: fs });
+      const t = this._ensureTerminalOpen();
+      if (t?.currentScreen?.receiveFilesystemUpdate) t.currentScreen.receiveFilesystemUpdate({ filesystem: fs });
+      emitSocket("fileBrowserEdit", this._selectedTerminalId, { filesystem: fs });
+    }
+
+    _findNodeById(node, id) {
+      if (node.id === id) return node;
+      if (node.children) {
+        for (const child of node.children) {
+          const found = this._findNodeById(child, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    _findParentNode(node, id) {
+      if (node.children) {
+        for (const child of node.children) {
+          if (child.id === id) return node;
+          const found = this._findParentNode(child, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    async _fbAddNode(type) {
+      if (type === "file") {
+        const result = await this._fbFileTypePrompt();
+        if (!result) return;
+        const fs = this._getFbFilesystem();
+        const parent = this._findNodeById(fs, this._fbSelectedParentId || "root") || fs;
+        if (!parent.children) parent.children = [];
+        const node = {
+          id: foundry.utils.randomID(8),
+          name: result.name,
+          type: "file",
+          hidden: false,
+          contentType: result.contentType,
+        };
+        if (result.contentType === "image") {
+          node.imagePath = result.imagePath || "";
+          node.content = "";
+        } else {
+          node.content = "";
+        }
+        parent.children.push(node);
+        this._saveFbFilesystem(fs);
+        if (result.contentType === "text") this._fbEditContent(node.id);
+        else this.render();
+      } else {
+        const name = await this._fbPrompt("Folder name:");
+        if (!name) return;
+        const fs = this._getFbFilesystem();
+        const parent = this._findNodeById(fs, this._fbSelectedParentId || "root") || fs;
+        if (!parent.children) parent.children = [];
+        parent.children.push({
+          id: foundry.utils.randomID(8),
+          name,
+          type: "folder",
+          hidden: false,
+          children: [],
+        });
+        this._saveFbFilesystem(fs);
+        this.render();
+      }
+    }
+
+    async _fbFileTypePrompt() {
+      return foundry.applications.api.DialogV2.prompt({
+        window: { title: "Add File" },
+        content: `
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div><label style="font-weight:bold;">Name</label><input id="fb-file-name" type="text" style="width:100%;" placeholder="filename.txt" autofocus /></div>
+            <div><label style="font-weight:bold;">Type</label>
+              <select id="fb-file-type" style="width:100%;">
+                <option value="text">Text (log, email, report...)</option>
+                <option value="image">Image</option>
+              </select>
+            </div>
+          </div>`,
+        ok: {
+          label: "Create",
+          callback: (event, button) => {
+            const name = button.form.querySelector("#fb-file-name")?.value?.trim();
+            if (!name) return null;
+            return {
+              name,
+              contentType: button.form.querySelector("#fb-file-type")?.value || "text",
+            };
+          },
+        },
+      });
+    }
+
+    async _fbDeleteNode(nodeId) {
+      const fs = this._getFbFilesystem();
+      const parent = this._findParentNode(fs, nodeId);
+      if (!parent) return;
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: "Delete" },
+        content: "<p>Delete this item and all its children?</p>",
+      });
+      if (!confirmed) return;
+      parent.children = parent.children.filter((c) => c.id !== nodeId);
+      this._saveFbFilesystem(fs);
+      this.render();
+    }
+
+    async _fbRenameNode(nodeId) {
+      const fs = this._getFbFilesystem();
+      const node = this._findNodeById(fs, nodeId);
+      if (!node) return;
+      const name = await this._fbPrompt("New name:", node.name);
+      if (!name) return;
+      node.name = name;
+      this._saveFbFilesystem(fs);
+      this.render();
+    }
+
+    _fbToggleHidden(nodeId) {
+      const fs = this._getFbFilesystem();
+      const node = this._findNodeById(fs, nodeId);
+      if (!node) return;
+      node.hidden = !node.hidden;
+      this._saveFbFilesystem(fs);
+      emitSocket("fileBrowserReveal", this._selectedTerminalId, { nodeId, hidden: node.hidden });
+      this.render();
+    }
+
+    async _fbEditContent(nodeId) {
+      const fs = this._getFbFilesystem();
+      const node = this._findNodeById(fs, nodeId);
+      if (!node || node.type !== "file") return;
+
+      if (node.contentType === "image") {
+        const fp = new FilePicker({
+          type: "image",
+          current: node.imagePath || "",
+          callback: (path) => {
+            node.imagePath = path;
+            this._saveFbFilesystem(fs);
+            this.render();
+          },
+        });
+        fp.browse();
+      } else {
+        const content = await foundry.applications.api.DialogV2.prompt({
+          window: { title: `Edit: ${node.name}` },
+          content: `<textarea id="fb-edit-content" style="width:100%;height:200px;font-family:monospace;font-size:12px;">${this._escapeHtml(node.content || "")}</textarea>`,
+          ok: {
+            label: "Save",
+            callback: (event, button) => button.form.querySelector("#fb-edit-content")?.value ?? "",
+          },
+        });
+        if (content === null || content === undefined) return;
+        node.content = content;
+        this._saveFbFilesystem(fs);
+        this.render();
+      }
+    }
+
+    async _fbMoveNode(nodeId) {
+      const fs = this._getFbFilesystem();
+      const node = this._findNodeById(fs, nodeId);
+      if (!node) return;
+      const folders = [];
+      this._collectFolders(fs, folders, "", nodeId);
+      const options = folders.map((f) => `<option value="${f.id}">${f.path || "/ (root)"}</option>`).join("");
+      const targetId = await foundry.applications.api.DialogV2.prompt({
+        window: { title: `Move "${node.name}" to...` },
+        content: `<select id="fb-move-target" style="width:100%;">${options}</select>`,
+        ok: {
+          label: "Move",
+          callback: (event, button) => button.form.querySelector("#fb-move-target")?.value,
+        },
+      });
+      if (!targetId) return;
+      const parent = this._findParentNode(fs, nodeId);
+      if (!parent) return;
+      parent.children = parent.children.filter((c) => c.id !== nodeId);
+      const target = this._findNodeById(fs, targetId);
+      if (!target) return;
+      if (!target.children) target.children = [];
+      target.children.push(node);
+      this._saveFbFilesystem(fs);
+      this.render();
+    }
+
+    _collectFolders(node, result, pathPrefix, excludeId) {
+      if (node.id === excludeId) return;
+      if (node.type === "folder" || node.id === "root") {
+        const path = node.id === "root" ? "" : pathPrefix + "/" + node.name;
+        result.push({ id: node.id, path });
+        if (node.children) {
+          for (const child of node.children) {
+            this._collectFolders(child, result, path, excludeId);
+          }
+        }
+      }
+    }
+
+    _escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    async _fbPrompt(label, defaultValue = "") {
+      return foundry.applications.api.DialogV2.prompt({
+        window: { title: label },
+        content: `<input id="fb-prompt-input" type="text" value="${defaultValue}" style="width:100%;" autofocus />`,
+        ok: {
+          label: "OK",
+          callback: (event, button) => button.form.querySelector("#fb-prompt-input")?.value?.trim() ?? "",
+        },
+      });
+    }
+
+    _renderFbTree() {
+      const container = this.element?.querySelector(".gm-fb-tree");
+      if (!container) return;
+      container.innerHTML = "";
+      const fs = this._getFbFilesystem();
+      this._fbSelectedParentId = "root";
+      this._renderFbNode(container, fs, 0);
+    }
+
+    _renderFbNode(container, node, depth) {
+      if (node.id === "root") {
+        if (node.children) {
+          for (const child of node.children) this._renderFbNode(container, child, depth);
+        }
+        if (!node.children?.length) {
+          const empty = document.createElement("div");
+          empty.classList.add("gm-fb-empty", "term-dim");
+          empty.textContent = "No files yet";
+          container.appendChild(empty);
+        }
+        return;
+      }
+
+      const row = document.createElement("div");
+      row.classList.add("gm-fb-node");
+      if (node.hidden) row.classList.add("gm-fb-node-hidden");
+
+      for (let i = 0; i < depth; i++) {
+        const indent = document.createElement("span");
+        indent.classList.add("gm-fb-indent");
+        row.appendChild(indent);
+      }
+
+      const icon = document.createElement("i");
+      const iconClass = node.type === "folder" ? "fa-folder" : node.contentType === "image" ? "fa-image" : "fa-file-alt";
+      icon.classList.add("fas", iconClass);
+      icon.style.marginRight = "4px";
+      icon.style.width = "14px";
+      row.appendChild(icon);
+
+      const name = document.createElement("span");
+      name.classList.add("gm-fb-node-name");
+      name.textContent = node.name;
+      name.style.cursor = "pointer";
+      name.addEventListener("click", () => {
+        const targetId = node.type === "folder" ? node.id : (this._findParentNode(this._getFbFilesystem(), node.id)?.id || "root");
+        this._fbSelectedParentId = targetId;
+        container.querySelectorAll(".gm-fb-node").forEach((n) => n.classList.remove("gm-fb-node-selected"));
+        row.classList.add("gm-fb-node-selected");
+        const targetLabel = this.element?.querySelector(".gm-fb-target-name");
+        if (targetLabel) {
+          const targetNode = this._findNodeById(this._getFbFilesystem(), targetId);
+          targetLabel.textContent = targetNode?.id === "root" ? "/" : targetNode?.name || "/";
+        }
+      });
+      row.appendChild(name);
+
+      const actions = document.createElement("span");
+      actions.classList.add("gm-fb-node-actions");
+
+      if (node.type === "file") {
+        const editBtn = document.createElement("button");
+        editBtn.classList.add("gm-btn", "gm-btn-tiny");
+        editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+        editBtn.title = "Edit content";
+        editBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbEditContent(node.id); });
+        actions.appendChild(editBtn);
+      }
+
+      const eyeBtn = document.createElement("button");
+      eyeBtn.classList.add("gm-btn", "gm-btn-tiny");
+      eyeBtn.innerHTML = `<i class="fas fa-${node.hidden ? "eye-slash" : "eye"}"></i>`;
+      eyeBtn.title = node.hidden ? "Reveal" : "Hide";
+      eyeBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbToggleHidden(node.id); });
+      actions.appendChild(eyeBtn);
+
+      const moveBtn = document.createElement("button");
+      moveBtn.classList.add("gm-btn", "gm-btn-tiny");
+      moveBtn.innerHTML = '<i class="fas fa-arrows-alt"></i>';
+      moveBtn.title = "Move to folder...";
+      moveBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbMoveNode(node.id); });
+      actions.appendChild(moveBtn);
+
+      const renameBtn = document.createElement("button");
+      renameBtn.classList.add("gm-btn", "gm-btn-tiny");
+      renameBtn.innerHTML = '<i class="fas fa-i-cursor"></i>';
+      renameBtn.title = "Rename";
+      renameBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbRenameNode(node.id); });
+      actions.appendChild(renameBtn);
+
+      const delBtn = document.createElement("button");
+      delBtn.classList.add("gm-btn", "gm-btn-tiny", "gm-btn-danger");
+      delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+      delBtn.title = "Delete";
+      delBtn.addEventListener("click", (e) => { e.stopPropagation(); this._fbDeleteNode(node.id); });
+      actions.appendChild(delBtn);
+
+      row.appendChild(actions);
+      container.appendChild(row);
+
+      if (node.type === "folder" && node.children) {
+        for (const child of node.children) this._renderFbNode(container, child, depth + 1);
+      }
     }
 
     async close(options = {}) {

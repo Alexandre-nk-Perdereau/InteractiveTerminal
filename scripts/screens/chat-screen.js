@@ -61,10 +61,8 @@ export class ChatScreen extends BaseScreen {
     SoundManager.play("beep");
 
     if (game.user.isGM) {
-      // GM broadcasts their own chat message to players
       emitSocket("chatMessage", this.terminal.terminalId, msg);
     } else {
-      // Player sends to GM for broadcast
       emitSocket("playerChat", this.terminal.terminalId, {
         text: value,
         userId: game.user.id,
@@ -75,7 +73,6 @@ export class ChatScreen extends BaseScreen {
 
   async receiveMessage(message) {
     if (message.isUser) {
-      // Don't duplicate own messages
       if (message.sender === (game.user.isGM ? "ADMIN" : game.user.name)) return;
       this.messages.push(message);
       this._renderMessage(message);

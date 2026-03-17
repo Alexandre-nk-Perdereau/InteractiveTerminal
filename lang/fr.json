@@ -94,5 +94,8 @@
   "ITERM.Countdown.OnExpire": "A l'expiration",
   "ITERM.Countdown.ExpireScreen": "Ecran d'expiration",
 
-  "ITERM.Boot.NextScreen": "Ecran suivant"
+  "ITERM.Boot.NextScreen": "Ecran suivant",
+
+  "ITERM.GM.FileBrowserControls": "Controles Navigateur de Fichiers",
+  "ITERM.FileBrowser.Empty": "< vide >"
 }

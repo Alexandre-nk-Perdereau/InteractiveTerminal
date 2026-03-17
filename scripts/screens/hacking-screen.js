@@ -160,12 +160,9 @@ export class HackingScreen extends BaseScreen {
     if (this.guesses.includes(word)) return;
 
     if (game.user.isGM) {
-      // GM plays locally
       this._applyAttempt(word);
     } else {
-      // Player sends to GM for broadcast
       emitSocket("hackingAttempt", this.terminal.terminalId, { word });
-      // Also apply locally for instant feedback
       this._applyAttempt(word);
     }
   }

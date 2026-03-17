@@ -521,6 +521,250 @@
   line-height: 1.5;
 }
 
+/* ---- FILE BROWSER SCREEN ---- */
+.screen-file-browser {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.fb-header {
+  padding-bottom: 4px;
+  font-size: 12px;
+}
+
+.fb-separator {
+  color: var(--term-color-dim);
+  margin-bottom: 8px;
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.fb-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--term-color-dim);
+}
+
+.fb-nav-back {
+  background: transparent;
+  border: 1px solid var(--term-color-dim);
+  color: var(--term-color);
+  font-family: var(--term-font);
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fb-nav-back:hover {
+  border-color: var(--term-color);
+  box-shadow: 0 0 6px var(--term-color-glow);
+}
+
+.fb-breadcrumb-bar {
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--term-color-dim);
+}
+
+.fb-breadcrumb {
+  cursor: pointer;
+  color: var(--term-color);
+}
+
+.fb-breadcrumb:hover {
+  text-decoration: underline;
+  text-shadow: 0 0 5px var(--term-color-glow);
+}
+
+.fb-breadcrumb-sep {
+  color: var(--term-color-dim);
+  margin: 0 2px;
+}
+
+.fb-lock-indicator {
+  text-align: center;
+  padding: 4px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.fb-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fb-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--term-color);
+  font-size: 13px;
+  transition: background 0.1s;
+}
+
+.fb-entry:hover {
+  background: rgba(var(--term-color-rgb, 51, 255, 51), 0.1);
+}
+
+.fb-entry i {
+  width: 16px;
+  text-align: center;
+}
+
+.fb-folder .fb-name {
+  font-weight: bold;
+}
+
+.fb-entry.fb-hidden {
+  opacity: 0.35;
+}
+
+.fb-hidden-icon {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--term-color-dim);
+}
+
+.fb-file-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--term-color-dim);
+  margin-bottom: 8px;
+}
+
+.fb-back-btn {
+  background: transparent;
+  border: 1px solid var(--term-color-dim);
+  color: var(--term-color);
+  font-family: var(--term-font);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.fb-back-btn:hover {
+  border-color: var(--term-color);
+  box-shadow: 0 0 8px var(--term-color-glow);
+}
+
+.fb-file-name {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.fb-file-content {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  color: var(--term-color);
+}
+
+.fb-image-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: normal;
+}
+
+.fb-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border: 1px solid var(--term-color-dim);
+  filter: brightness(0.9) contrast(1.1);
+}
+
+/* ---- FILE BROWSER GM TREE EDITOR ---- */
+.gm-fb-tree-container {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 8px 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.gm-fb-node {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px;
+  font-size: 12px;
+  border-radius: 3px;
+}
+
+.gm-fb-node:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.gm-fb-node-selected {
+  background: rgba(51, 255, 51, 0.1);
+  border: 1px solid rgba(51, 255, 51, 0.2);
+}
+
+.gm-fb-node-name {
+  flex: 1;
+  color: #ddd;
+  cursor: pointer;
+}
+
+.gm-fb-node-hidden .gm-fb-node-name {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.gm-fb-node-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.gm-fb-indent {
+  display: inline-block;
+  width: 16px;
+}
+
+.gm-fb-empty {
+  padding: 8px;
+  text-align: center;
+  font-size: 11px;
+}
+
+.gm-btn-tiny {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: #aaa;
+  padding: 2px 5px;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.gm-btn-tiny:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.gm-btn-tiny.gm-btn-danger:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff5555;
+}
+
 /* ---- GM CONTROLS PANEL ---- */
 .interactive-terminal-gm-panel .window-content {
   overflow-y: auto;

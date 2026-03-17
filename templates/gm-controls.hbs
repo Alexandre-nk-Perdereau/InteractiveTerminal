@@ -204,6 +204,38 @@
   </section>
   {{/if}}
 
+  {{!-- File Browser Controls --}}
+  {{#if isFileBrowserScreen}}
+  <section class="gm-section gm-section-highlight">
+    <h3><i class="fas fa-folder-open"></i> File Browser</h3>
+    <div class="gm-row">
+      <button type="button" data-action="fb-lockNav"
+              class="gm-btn gm-btn-half {{#if fileBrowserNavLocked}}gm-btn-active{{/if}}">
+        <i class="fas fa-{{#if fileBrowserNavLocked}}lock{{else}}lock-open{{/if}}"></i>
+        {{#if fileBrowserNavLocked}}Unlock Nav{{else}}Lock Nav{{/if}}
+      </button>
+      <button type="button" data-action="fb-forceHome" class="gm-btn gm-btn-half">
+        <i class="fas fa-home"></i> Force Home
+      </button>
+    </div>
+    <div class="gm-fb-target term-dim" style="font-size:11px;margin-bottom:4px;">
+      Target: <span class="gm-fb-target-name">/</span>
+      <small>(click a folder to change)</small>
+    </div>
+    <div class="gm-row">
+      <button type="button" data-action="fb-addFolder" class="gm-btn gm-btn-half">
+        <i class="fas fa-folder-plus"></i> Add Folder
+      </button>
+      <button type="button" data-action="fb-addFile" class="gm-btn gm-btn-half">
+        <i class="fas fa-file-circle-plus"></i> Add File
+      </button>
+    </div>
+    <div class="gm-fb-tree-container">
+      <div class="gm-fb-tree"></div>
+    </div>
+  </section>
+  {{/if}}
+
   {{!-- Chat NPC Controls --}}
   <section class="gm-section">
     <h3><i class="fas fa-comment"></i> {{localize "ITERM.GM.NpcChat"}}</h3>

@@ -94,7 +94,6 @@ export class LoginScreen extends BaseScreen {
     this.attempts++;
 
     if (game.user.isGM) {
-      // GM validates locally
       const correct = password === this.config.password;
       this.showResult(correct);
       if (correct) {
@@ -105,7 +104,6 @@ export class LoginScreen extends BaseScreen {
         }, 2500);
       }
     } else {
-      // Player sends to GM for validation
       emitSocket("loginAttempt", this.terminal.terminalId, { password });
       const status = this.element.querySelector(".login-status");
       if (status) {

@@ -7,6 +7,7 @@ import { DownloadScreen } from "./screens/download-screen.js";
 import { CountdownScreen } from "./screens/countdown-screen.js";
 import { CrashScreen } from "./screens/crash-screen.js";
 import { BootScreen } from "./screens/boot-screen.js";
+import { FileBrowserScreen } from "./screens/file-browser-screen.js";
 import { GlitchEffect } from "./effects/glitch.js";
 import { SoundManager } from "./effects/sounds.js";
 
@@ -27,6 +28,7 @@ export function getTerminalApplicationClass() {
       countdown: CountdownScreen,
       crash: CrashScreen,
       boot: BootScreen,
+      fileBrowser: FileBrowserScreen,
     };
 
     static DEFAULT_OPTIONS = {
@@ -206,7 +208,6 @@ export function getTerminalApplicationClass() {
     }
 
     showSystemMessage(text, cssClass = "term-warning") {
-      // Only append to screen output, not to terminal-body directly (avoids duplication)
       if (this.currentScreen) {
         this.currentScreen.appendLine(text, `terminal-system-message ${cssClass}`);
       }

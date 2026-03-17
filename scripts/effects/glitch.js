@@ -32,10 +32,9 @@ export class GlitchEffect {
 
     if (def.needsOverlay) GlitchEffect._ensureOverlay(crt);
 
-    // filter-only → CRT, overlay-based → CRT (overlay lives there), movement → content
     const applyTo = def.filterOnly || def.needsOverlay ? crt : target;
 
-    // Flash conflicts with the flicker animation — pause it temporarily
+    // Flash conflicts with the flicker animation -- pause it temporarily
     if (def.filterOnly && crt.classList.contains("flicker")) {
       crt.classList.remove("flicker");
       setTimeout(() => crt.classList.add("flicker"), customDuration ?? def.duration);
@@ -60,7 +59,6 @@ export class GlitchEffect {
     if (!element) return;
     const classes = Object.values(GlitchEffect.TYPES).map((t) => t.class);
     for (const cls of classes) element.classList.remove(cls);
-    // Also clear from parent/child in case element is content or crt
     const crt = element.closest?.(".terminal-crt") || element.querySelector?.(".terminal-crt");
     const content = element.closest?.(".terminal-content") || element.querySelector?.(".terminal-content");
     if (crt) for (const cls of classes) crt.classList.remove(cls);
@@ -68,12 +66,10 @@ export class GlitchEffect {
   }
 
   // --- Looping support ---
-  // _loops is a Map<string, intervalId> keyed by a unique loop key
   static _loops = new Map();
 
   static startLoop(element, type, intervalMs = 2000, loopKey = "default") {
     GlitchEffect.stopLoop(loopKey);
-    // Fire immediately, then repeat
     GlitchEffect.trigger(element, type);
     const id = setInterval(() => GlitchEffect.trigger(element, type), intervalMs);
     GlitchEffect._loops.set(loopKey, id);
