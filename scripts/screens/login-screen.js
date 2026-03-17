@@ -94,8 +94,18 @@ export class LoginScreen extends BaseScreen {
     this.attempts++;
 
     if (game.user.isGM) {
-      this._showResult(password === this.config.password);
+      // GM validates locally
+      const correct = password === this.config.password;
+      this.showResult(correct);
+      if (correct) {
+        const successScreen = this.config.successScreen || "chat";
+        setTimeout(() => {
+          this.terminal.switchScreen(successScreen);
+          emitSocket("switchScreen", this.terminal.terminalId, { screen: successScreen });
+        }, 2500);
+      }
     } else {
+      // Player sends to GM for validation
       emitSocket("loginAttempt", this.terminal.terminalId, { password });
       const status = this.element.querySelector(".login-status");
       if (status) {
@@ -105,15 +115,7 @@ export class LoginScreen extends BaseScreen {
     }
   }
 
-  processLoginAttempt(password) {
-    const correct = password === this.config.password;
-    emitSocket("updateConfig", this.terminal.terminalId, {
-      _loginResult: { correct },
-    });
-    this._showResult(correct);
-  }
-
-  async _showResult(correct) {
+  async showResult(correct) {
     const status = this.element?.querySelector(".login-status");
     const crtEl = this.terminal.element?.querySelector(".terminal-crt");
 

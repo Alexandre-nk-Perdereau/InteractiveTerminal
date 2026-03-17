@@ -54,14 +54,19 @@ export class ChatScreen extends BaseScreen {
 
   onInput(value) {
     if (!value) return;
-    const msg = { sender: "USER", text: value, timestamp: Date.now(), isUser: true };
+    const senderName = game.user.isGM ? "ADMIN" : game.user.name;
+    const msg = { sender: senderName, text: value, timestamp: Date.now(), isUser: true };
     this.messages.push(msg);
     this._renderMessage(msg);
     SoundManager.play("beep");
 
-    if (!game.user.isGM) {
-      emitSocket("chatMessage", this.terminal.terminalId, {
-        ...msg,
+    if (game.user.isGM) {
+      // GM broadcasts their own chat message to players
+      emitSocket("chatMessage", this.terminal.terminalId, msg);
+    } else {
+      // Player sends to GM for broadcast
+      emitSocket("playerChat", this.terminal.terminalId, {
+        text: value,
         userId: game.user.id,
         userName: game.user.name,
       });
@@ -70,6 +75,8 @@ export class ChatScreen extends BaseScreen {
 
   async receiveMessage(message) {
     if (message.isUser) {
+      // Don't duplicate own messages
+      if (message.sender === (game.user.isGM ? "ADMIN" : game.user.name)) return;
       this.messages.push(message);
       this._renderMessage(message);
       return;

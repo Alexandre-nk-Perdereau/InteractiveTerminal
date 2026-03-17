@@ -158,6 +158,24 @@ export class HackingScreen extends BaseScreen {
 
   _attemptWord(word) {
     if (this.guesses.includes(word)) return;
+
+    if (game.user.isGM) {
+      // GM plays locally
+      this._applyAttempt(word);
+    } else {
+      // Player sends to GM for broadcast
+      emitSocket("hackingAttempt", this.terminal.terminalId, { word });
+      // Also apply locally for instant feedback
+      this._applyAttempt(word);
+    }
+  }
+
+  processRemoteAttempt(word) {
+    if (this.guesses.includes(word)) return;
+    this._applyAttempt(word);
+  }
+
+  _applyAttempt(word) {
     this.guesses.push(word);
     this.attemptsLeft--;
 
@@ -185,8 +203,6 @@ export class HackingScreen extends BaseScreen {
         crt.appendChild(flash);
         setTimeout(() => flash.remove(), 2000);
       }
-
-      if (!game.user.isGM) emitSocket("hackingAction", this.terminal.terminalId, { word });
     } else {
       const likeness = this._likeness(word, this.correctWord);
       if (output) {
@@ -233,7 +249,4 @@ export class HackingScreen extends BaseScreen {
     container.scrollTop = container.scrollHeight;
   }
 
-  processHackingAttempt(word, userId) {
-    console.log(`InteractiveTerminal | Player ${userId} attempted: ${word}`);
-  }
 }

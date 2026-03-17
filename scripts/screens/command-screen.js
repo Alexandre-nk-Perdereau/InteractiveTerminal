@@ -132,6 +132,12 @@ export class CommandScreen extends BaseScreen {
     this.element?.querySelector(".command-waiting")?.remove();
   }
 
+  appendRemoteCommand(command) {
+    this._appendCommand(command);
+    this.history.push({ type: "command", text: command });
+    this._startWaiting();
+  }
+
   async receiveGmResponse(text) {
     if (!this.active) return;
     this._receiveResponse(text);

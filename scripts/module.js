@@ -52,70 +52,117 @@ function initSocket() {
 
 function handleSocketMessage(data) {
   const { action, terminalId, payload, userId } = data;
+  const t = moduleState.terminals.get(terminalId);
+
   const handlers = {
     switchScreen: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) t.switchScreen(payload.screen);
     },
     chatMessage: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) t.currentScreen?.receiveMessage?.(payload);
     },
     updatePermissions: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) t.updatePermissions(payload);
     },
     triggerGlitch: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) GlitchEffect.trigger(t.element, payload.type, payload.duration);
     },
     playSound: () => {
       if (game.settings.get(MODULE_ID, "enableSounds")) SoundManager.play(payload.sound, payload.volume);
     },
+
+    // Player sends login attempt -> GM validates and broadcasts result
     loginAttempt: () => {
       if (!game.user.isGM) return;
-      const t = moduleState.terminals.get(terminalId);
-      if (t) t.currentScreen?.processLoginAttempt?.(payload.password, userId);
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      const config = terminals[terminalId];
+      const correct = payload.password === config?.screenConfigs?.login?.password;
+      emitSocket("loginResult", terminalId, { correct, userId });
+      // Also apply locally on GM
+      if (t) t.currentScreen?.showResult?.(correct);
+      if (correct) {
+        const successScreen = config?.screenConfigs?.login?.successScreen || "chat";
+        setTimeout(() => {
+          if (t) t.switchScreen(successScreen);
+          emitSocket("switchScreen", terminalId, { screen: successScreen });
+        }, 2500);
+      }
     },
-    hackingAction: () => {
+    // Broadcast login result to players
+    loginResult: () => {
+      if (game.user.isGM) return;
+      if (t) t.currentScreen?.showResult?.(payload.correct);
+      // If correct, the GM already broadcasted switchScreen separately
+    },
+
+    // Player sends hacking attempt -> GM validates and broadcasts
+    hackingAttempt: () => {
       if (!game.user.isGM) return;
-      const t = moduleState.terminals.get(terminalId);
-      if (t) t.currentScreen?.processHackingAttempt?.(payload.word, userId);
+      // Broadcast to all clients so everyone sees the attempt
+      emitSocket("hackingResult", terminalId, { word: payload.word, userId });
+      // Apply locally on GM
+      if (t) t.currentScreen?.processRemoteAttempt?.(payload.word);
     },
+    hackingResult: () => {
+      // The player who sent it already applied locally, GM already applied in hackingAttempt handler
+      if (game.user.isGM || game.user.id === payload.userId) return;
+      if (t) t.currentScreen?.processRemoteAttempt?.(payload.word);
+    },
+
+    // Player sends command -> GM gets notified, writes response, broadcasts
+    playerCommand: () => {
+      if (!game.user.isGM) return;
+      onPlayerCommand(terminalId, payload);
+      // Also show the player's command on the GM's terminal command screen
+      if (t?.currentScreen?.appendRemoteCommand) {
+        t.currentScreen.appendRemoteCommand(payload.command, payload.userName);
+      }
+    },
+    gmResponse: () => {
+      // GM already applied locally in sendGmResponse, skip to avoid duplication
+      if (game.user.isGM) return;
+      if (t) t.currentScreen?.receiveGmResponse?.(payload.text);
+    },
+
+    // Player sends chat -> GM broadcasts to all
+    playerChat: () => {
+      if (!game.user.isGM) return;
+      const msg = { sender: payload.userName || "USER", text: payload.text, timestamp: Date.now(), isUser: true };
+      // Broadcast to all clients including GM
+      emitSocket("chatBroadcast", terminalId, msg);
+      // Also show locally on GM
+      if (t) t.currentScreen?.receiveMessage?.(msg);
+    },
+    chatBroadcast: () => {
+      // GM already applied locally in playerChat handler, skip to avoid duplication
+      if (game.user.isGM) return;
+      if (t) t.currentScreen?.receiveMessage?.(payload);
+    },
+    // GM sends NPC message (already broadcast by GM)
+    chatMessage: () => {
+      if (t) t.currentScreen?.receiveMessage?.(payload);
+    },
+
     openTerminal: () => openTerminal(terminalId, payload),
     closeTerminal: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) {
         t.close();
         moduleState.terminals.delete(terminalId);
       }
     },
     updateConfig: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) t.updateConfig(payload);
     },
     lockTerminal: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) t.setLocked(payload.locked);
     },
     systemMessage: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) t.showSystemMessage(payload.text, payload.cssClass);
     },
     resetScreen: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) t.resetScreen(payload.screen);
     },
-    playerCommand: () => {
-      if (!game.user.isGM) return;
-      onPlayerCommand(terminalId, payload);
-    },
-    gmResponse: () => {
-      const t = moduleState.terminals.get(terminalId);
-      if (t) t.currentScreen?.receiveGmResponse?.(payload.text);
-    },
     downloadControl: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t && t.currentScreen) {
         const s = t.currentScreen;
         const a = payload.cmd;
@@ -128,7 +175,6 @@ function handleSocketMessage(data) {
       }
     },
     countdownControl: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t && t.currentScreen) {
         const s = t.currentScreen;
         const a = payload.cmd;
@@ -140,12 +186,10 @@ function handleSocketMessage(data) {
       }
     },
     crashPreset: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t && t.currentScreen?.setPreset) t.currentScreen.setPreset(payload.preset);
     },
     runMacro: () => runMacroSequence(terminalId, payload.steps),
     startGlitchLoop: () => {
-      const t = moduleState.terminals.get(terminalId);
       if (t) GlitchEffect.startLoop(t.element, payload.type, payload.intervalMs, terminalId);
     },
     stopGlitchLoop: () => {
@@ -322,6 +366,8 @@ function onPlayerCommand(terminalId, payload) {
     userName: payload.userName,
     timestamp: Date.now(),
   });
+  // Notify GM visually
+  ui.notifications.info(`Terminal command from ${payload.userName}: ${payload.command}`);
   if (moduleState.gmControls) moduleState.gmControls.render();
 }
 
@@ -338,8 +384,10 @@ function clearPendingCommand(terminalId, index = 0) {
 }
 
 function sendGmResponse(terminalId, text) {
+  // Apply locally on GM terminal
   const terminal = moduleState.terminals.get(terminalId);
   if (terminal) terminal.currentScreen?.receiveGmResponse?.(text);
+  // Broadcast to all players
   emitSocket("gmResponse", terminalId, { text });
   clearPendingCommand(terminalId);
   if (moduleState.gmControls) moduleState.gmControls.render();
