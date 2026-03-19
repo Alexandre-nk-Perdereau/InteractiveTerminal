@@ -374,11 +374,9 @@
         <div class="gm-row">
           <label class="gm-label">{{localize "ITERM.GM.SuccessScreen"}}</label>
           <select name="successScreen" class="gm-input">
-            <option value="chat" {{#if (eq selected.screenConfigs.login.successScreen "chat")}}selected{{/if}}>Chat</option>
-            <option value="hacking" {{#if (eq selected.screenConfigs.login.successScreen "hacking")}}selected{{/if}}>Hacking</option>
-            <option value="command" {{#if (eq selected.screenConfigs.login.successScreen "command")}}selected{{/if}}>Command</option>
-            <option value="download" {{#if (eq selected.screenConfigs.login.successScreen "download")}}selected{{/if}}>Download</option>
-            <option value="countdown" {{#if (eq selected.screenConfigs.login.successScreen "countdown")}}selected{{/if}}>Countdown</option>
+            {{#each screens}}
+            <option value="{{this.id}}" {{#if (eq this.id ../loginSuccessScreen)}}selected{{/if}}>{{this.label}}</option>
+            {{/each}}
           </select>
         </div>
         <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>
@@ -428,9 +426,9 @@
         <div class="gm-row">
           <label class="gm-label">{{localize "ITERM.Countdown.ExpireScreen"}}</label>
           <select name="expireScreen" class="gm-input">
-            <option value="crash" {{#if (eq countdownExpireScreen "crash")}}selected{{/if}}>Crash</option>
-            <option value="login" {{#if (eq countdownExpireScreen "login")}}selected{{/if}}>Login</option>
-            <option value="boot" {{#if (eq countdownExpireScreen "boot")}}selected{{/if}}>Boot</option>
+            {{#each screens}}
+            <option value="{{this.id}}" {{#if (eq this.id ../countdownExpireScreen)}}selected{{/if}}>{{this.label}}</option>
+            {{/each}}
           </select>
         </div>
         <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>
@@ -444,11 +442,9 @@
         <div class="gm-row">
           <label class="gm-label">{{localize "ITERM.Boot.NextScreen"}}</label>
           <select name="nextScreen" class="gm-input">
-            <option value="login" {{#if (eq bootNextScreen "login")}}selected{{/if}}>Login</option>
-            <option value="chat" {{#if (eq bootNextScreen "chat")}}selected{{/if}}>Chat</option>
-            <option value="command" {{#if (eq bootNextScreen "command")}}selected{{/if}}>Command</option>
-            <option value="hacking" {{#if (eq bootNextScreen "hacking")}}selected{{/if}}>Hacking</option>
-            <option value="download" {{#if (eq bootNextScreen "download")}}selected{{/if}}>Download</option>
+            {{#each screens}}
+            <option value="{{this.id}}" {{#if (eq this.id ../bootNextScreen)}}selected{{/if}}>{{this.label}}</option>
+            {{/each}}
           </select>
         </div>
         <button type="submit" class="gm-btn gm-btn-full"><i class="fas fa-save"></i> {{localize "ITERM.GM.Save"}}</button>

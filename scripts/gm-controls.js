@@ -9,6 +9,7 @@ import {
   getPendingCommands,
   sendGmResponse,
 } from "./module.js";
+import { getTerminalApplicationClass } from "./terminal-app.js";
 import { GlitchEffect } from "./effects/glitch.js";
 import { SoundManager } from "./effects/sounds.js";
 
@@ -158,17 +159,11 @@ export function getGmControlsApplicationClass() {
         currentScreen: selected?.screen || "login",
         isDeployed: selected?.deployed || false,
         players,
-        screens: [
-          { id: "login", label: "Login" },
-          { id: "chat", label: "Chat" },
-          { id: "hacking", label: "Hacking" },
-          { id: "command", label: "Command" },
-          { id: "download", label: "Download" },
-          { id: "countdown", label: "Countdown" },
-          { id: "crash", label: "Crash" },
-          { id: "boot", label: "Boot" },
-          { id: "fileBrowser", label: "Files" },
-        ],
+        screens: Object.entries(getTerminalApplicationClass().SCREENS).map(([id, cls]) => ({
+          id,
+          label: cls.screenName || id,
+        })),
+        loginSuccessScreen: selected?.screenConfigs?.login?.successScreen ?? "chat",
         themes: [
           { id: "green", label: "Green" },
           { id: "amber", label: "Amber" },
@@ -670,7 +665,7 @@ export function getGmControlsApplicationClass() {
         delay: `<input type="number" class="step-param-ms gm-input" value="500" min="100" max="10000" step="100" style="width:70px;" placeholder="ms" />`,
         glitch: `<select class="step-param-type gm-input">${glitchOpts}</select>`,
         sound: `<select class="step-param-sound gm-input">${soundOpts}</select>`,
-        screen: `<select class="step-param-screen gm-input"><option value="login">Login</option><option value="chat">Chat</option><option value="hacking">Hacking</option><option value="command">Command</option><option value="download">Download</option><option value="countdown">Countdown</option><option value="crash">Crash</option><option value="boot">Boot</option></select>`,
+        screen: `<select class="step-param-screen gm-input">${Object.entries(getTerminalApplicationClass().SCREENS).map(([id, cls]) => `<option value="${id}">${cls.screenName || id}</option>`).join("")}</select>`,
         message: `<input type="text" class="step-param-text gm-input" placeholder="Message text" style="flex:1;" /><select class="step-param-css gm-input" style="width:80px;"><option value="term-warning">Warn</option><option value="term-error">Error</option><option value="term-success">OK</option><option value="term-info">Info</option></select>`,
         lock: `<select class="step-param-locked gm-input"><option value="true">Lock</option><option value="false">Unlock</option></select>`,
       };

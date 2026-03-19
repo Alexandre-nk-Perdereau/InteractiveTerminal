@@ -30,6 +30,12 @@ export class FileBrowserScreen extends BaseScreen {
     this.navigationLocked = config.navigationLocked || false;
   }
 
+  deactivate() {
+    if (this._abortController) this._abortController.abort();
+    this._abortController = null;
+    super.deactivate();
+  }
+
   getData() {
     return {
       ...super.getData(),
@@ -40,6 +46,8 @@ export class FileBrowserScreen extends BaseScreen {
   async activate(container) {
     this.active = true;
     this.element = container;
+    if (this._abortController) this._abortController.abort();
+    this._abortController = new AbortController();
     const html = await foundry.applications.handlebars.renderTemplate(this.template, this.getData());
     container.innerHTML = html;
     this.activateListeners(container);
@@ -47,6 +55,7 @@ export class FileBrowserScreen extends BaseScreen {
   }
 
   activateListeners(container) {
+    const signal = this._abortController?.signal;
     container.addEventListener("click", (e) => {
       const entry = e.target.closest(".fb-entry");
       if (entry) {
@@ -71,7 +80,7 @@ export class FileBrowserScreen extends BaseScreen {
         if (this.navigationLocked && !game.user.isGM) return;
         this.goBack();
       }
-    });
+    }, { signal });
   }
 
   _renderView() {

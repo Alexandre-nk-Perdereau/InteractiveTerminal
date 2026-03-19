@@ -216,7 +216,8 @@ function emitSocket(action, terminalId, payload = {}) {
 
 function openTerminal(terminalId, config = {}) {
   if (moduleState.terminals.has(terminalId)) {
-    moduleState.terminals.get(terminalId).bringToFront();
+    const existing = moduleState.terminals.get(terminalId);
+    if (existing.element) existing.bringToFront();
     return;
   }
   const TerminalApp = getTerminalApplicationClass();
@@ -436,7 +437,7 @@ function registerSceneControls(controls) {
 
 function openGmPanel() {
   if (moduleState.gmControls) {
-    moduleState.gmControls.bringToFront();
+    if (moduleState.gmControls.element) moduleState.gmControls.bringToFront();
     return;
   }
   const GmControls = getGmControlsApplicationClass();
