@@ -30,24 +30,36 @@
   --term-color: var(--term-green);
   --term-color-dim: var(--term-green-dim);
   --term-color-glow: var(--term-green-glow);
+  --term-color-rgb: 51, 255, 51;
+  --term-npc-color: var(--term-amber);
+  --term-npc-glow: var(--term-amber-glow);
 }
 
 .terminal-theme-amber {
   --term-color: var(--term-amber);
   --term-color-dim: var(--term-amber-dim);
   --term-color-glow: var(--term-amber-glow);
+  --term-color-rgb: 255, 176, 0;
+  --term-npc-color: var(--term-blue);
+  --term-npc-glow: var(--term-blue-glow);
 }
 
 .terminal-theme-blue {
   --term-color: var(--term-blue);
   --term-color-dim: var(--term-blue-dim);
   --term-color-glow: var(--term-blue-glow);
+  --term-color-rgb: 0, 212, 255;
+  --term-npc-color: var(--term-amber);
+  --term-npc-glow: var(--term-amber-glow);
 }
 
 .terminal-theme-white {
   --term-color: var(--term-white);
   --term-color-dim: var(--term-white-dim);
   --term-color-glow: var(--term-white-glow);
+  --term-color-rgb: 224, 224, 224;
+  --term-npc-color: var(--term-amber);
+  --term-npc-glow: var(--term-amber-glow);
 }
 
 /* Main terminal window */

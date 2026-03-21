@@ -113,16 +113,16 @@ export class ChatScreen extends BaseScreen {
     if (!output) return;
 
     const line = document.createElement("div");
-    line.classList.add("chat-message");
-    if (msg.isUser) line.classList.add("chat-user");
-    if (msg.isNpc) line.classList.add("chat-npc");
+    line.classList.add("iterm-chat-message");
+    if (msg.isUser) line.classList.add("iterm-chat-user");
+    if (msg.isNpc) line.classList.add("iterm-chat-npc");
 
     const sender = document.createElement("span");
-    sender.classList.add("chat-sender");
+    sender.classList.add("iterm-chat-sender");
     sender.textContent = `[${msg.sender}]`;
 
     const text = document.createElement("span");
-    text.classList.add("chat-text");
+    text.classList.add("iterm-chat-text");
     text.textContent = ` ${msg.text}`;
 
     line.append(sender, text);
@@ -135,10 +135,10 @@ export class ChatScreen extends BaseScreen {
     if (!output) return;
 
     const typingDiv = document.createElement("div");
-    typingDiv.classList.add("chat-message", "chat-npc", "chat-typing");
+    typingDiv.classList.add("iterm-chat-message", "iterm-chat-npc", "iterm-chat-typing");
 
     const typingSender = document.createElement("span");
-    typingSender.classList.add("chat-sender");
+    typingSender.classList.add("iterm-chat-sender");
     typingSender.textContent = `[${msg.sender}]`;
 
     const typingIndicator = document.createElement("span");

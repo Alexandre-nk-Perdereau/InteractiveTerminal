@@ -103,12 +103,12 @@
   height: 100%;
 }
 
-.chat-header {
+.iterm-chat-header {
   padding-bottom: 8px;
   font-size: 12px;
 }
 
-.chat-separator {
+.iterm-chat-separator {
   color: var(--term-color-dim);
   margin-bottom: 8px;
   font-size: 12px;
@@ -116,7 +116,7 @@
   white-space: nowrap;
 }
 
-.chat-messages {
+.iterm-iterm-chat-messages {
   flex: 1;
   overflow-y: auto;
   display: flex;
@@ -124,34 +124,39 @@
   gap: 4px;
 }
 
-.chat-message {
+.screen-chat .iterm-chat-message {
   line-height: 1.5;
   word-wrap: break-word;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 2px 0;
+  margin: 0;
 }
 
-.chat-sender {
+.iterm-chat-sender {
   font-weight: bold;
   color: var(--term-color);
 }
 
-.chat-user .chat-sender {
+.iterm-chat-user .iterm-chat-sender {
   color: var(--term-color);
 }
 
-.chat-npc .chat-sender {
-  color: var(--term-amber);
-  text-shadow: 0 0 5px var(--term-amber-glow);
+.iterm-chat-npc .iterm-chat-sender {
+  color: var(--term-npc-color, var(--term-amber));
+  text-shadow: 0 0 5px var(--term-npc-glow, var(--term-amber-glow));
 }
 
-.chat-text {
+.iterm-chat-text {
   color: var(--term-color);
 }
 
-.chat-npc .chat-text {
-  color: var(--term-amber);
+.iterm-chat-npc .iterm-chat-text {
+  color: var(--term-npc-color, var(--term-amber));
 }
 
-.chat-typing {
+.iterm-chat-typing {
   opacity: 0.7;
 }
 
@@ -395,14 +400,28 @@
 .countdown-time.countdown-critical {
   color: #ff3333;
   text-shadow:
-    0 0 20px rgba(255, 51, 51, 0.6),
-    0 0 40px rgba(255, 51, 51, 0.3);
-  animation: countdownPulse 1s ease-in-out infinite;
+    0 0 20px rgba(255, 51, 51, 0.8),
+    0 0 50px rgba(255, 51, 51, 0.5),
+    0 0 100px rgba(255, 51, 51, 0.2);
+  animation: countdownPulse 0.8s ease-in-out infinite;
+}
+
+.screen-countdown:has(.countdown-critical) {
+  background: radial-gradient(ellipse at center, rgba(255, 30, 30, 0.08) 0%, transparent 70%);
+  animation: countdownBgPulse 0.8s ease-in-out infinite;
 }
 
 .countdown-time.countdown-expired {
   color: #ff3333;
+  text-shadow:
+    0 0 30px rgba(255, 51, 51, 1),
+    0 0 80px rgba(255, 51, 51, 0.6),
+    0 0 150px rgba(255, 51, 51, 0.3);
   animation: countdownFlash 0.5s steps(2) infinite;
+}
+
+.screen-countdown:has(.countdown-expired) {
+  background: radial-gradient(ellipse at center, rgba(255, 30, 30, 0.15) 0%, transparent 70%);
 }
 
 @keyframes countdownPulse {
@@ -410,10 +429,28 @@
   100% {
     opacity: 1;
     transform: scale(1);
+    text-shadow:
+      0 0 20px rgba(255, 51, 51, 0.8),
+      0 0 50px rgba(255, 51, 51, 0.5),
+      0 0 100px rgba(255, 51, 51, 0.2);
   }
   50% {
-    opacity: 0.7;
-    transform: scale(1.02);
+    opacity: 0.85;
+    transform: scale(1.04);
+    text-shadow:
+      0 0 30px rgba(255, 51, 51, 1),
+      0 0 70px rgba(255, 51, 51, 0.7),
+      0 0 120px rgba(255, 51, 51, 0.3);
+  }
+}
+
+@keyframes countdownBgPulse {
+  0%,
+  100% {
+    background: radial-gradient(ellipse at center, rgba(255, 30, 30, 0.06) 0%, transparent 70%);
+  }
+  50% {
+    background: radial-gradient(ellipse at center, rgba(255, 30, 30, 0.12) 0%, transparent 70%);
   }
 }
 
@@ -422,7 +459,7 @@
     opacity: 1;
   }
   50% {
-    opacity: 0.3;
+    opacity: 0.2;
   }
 }
 
@@ -615,7 +652,7 @@
 }
 
 .fb-entry:hover {
-  background: rgba(var(--term-color-rgb, 51, 255, 51), 0.1);
+  background: rgba(var(--term-color-rgb), 0.1);
 }
 
 .fb-entry i {
