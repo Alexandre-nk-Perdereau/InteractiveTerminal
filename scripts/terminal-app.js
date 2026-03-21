@@ -151,10 +151,12 @@ export function getTerminalApplicationClass() {
     }
 
     async switchScreen(screenId) {
+      if (!this.element) return;
       this.config.screen = screenId;
       GlitchEffect.trigger(this.element, "short");
       SoundManager.play("glitch");
       await new Promise((r) => setTimeout(r, 200));
+      if (!this.element) return;
       await this._activateScreen();
     }
 
@@ -208,7 +210,7 @@ export function getTerminalApplicationClass() {
     }
 
     showSystemMessage(text, cssClass = "term-warning") {
-      if (this.currentScreen) {
+      if (this.currentScreen?.active && this.currentScreen?.element) {
         this.currentScreen.appendLine(text, `terminal-system-message ${cssClass}`);
       }
     }
@@ -238,7 +240,12 @@ export function getTerminalApplicationClass() {
         crt.classList.add("terminal-power-off");
         await new Promise((r) => setTimeout(r, 300));
       }
-      this.currentScreen?.deactivate();
+      for (const screen of Object.values(this._screenInstances)) {
+        screen.deactivate();
+      }
+      this._screenInstances = {};
+      this.currentScreen = null;
+      GlitchEffect.stopLoop(this.terminalId);
       return super.close(options);
     }
 

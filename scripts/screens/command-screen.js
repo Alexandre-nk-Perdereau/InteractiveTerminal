@@ -133,13 +133,14 @@ export class CommandScreen extends BaseScreen {
   }
 
   appendRemoteCommand(command) {
+    if (!this.active || !this.element) return;
     this._appendCommand(command);
     this.history.push({ type: "command", text: command });
     this._startWaiting();
   }
 
   async receiveGmResponse(text) {
-    if (!this.active) return;
+    if (!this.active || !this.element) return;
     this._receiveResponse(text);
   }
 

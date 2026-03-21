@@ -83,18 +83,20 @@ export class LoginScreen extends BaseScreen {
     }
   }
 
-  _onSubmitPassword() {
+  async _onSubmitPassword() {
     if (this.locked || !this.canInteract()) return;
-    const input = this.element.querySelector(".login-password-input");
+    const input = this.element?.querySelector(".login-password-input");
     if (!input) return;
     const password = input.value;
     input.value = "";
     if (!password) return;
 
     this.attempts++;
+    const hashedPassword = await LoginScreen._hashPassword(password);
 
     if (game.user.isGM) {
-      const correct = password === this.config.password;
+      const hashedExpected = await LoginScreen._hashPassword(this.config.password);
+      const correct = hashedPassword === hashedExpected;
       this.showResult(correct);
       if (correct) {
         const successScreen = this.config.successScreen || "chat";
@@ -104,8 +106,8 @@ export class LoginScreen extends BaseScreen {
         }, 2500);
       }
     } else {
-      emitSocket("loginAttempt", this.terminal.terminalId, { password });
-      const status = this.element.querySelector(".login-status");
+      emitSocket("loginAttempt", this.terminal.terminalId, { passwordHash: hashedPassword });
+      const status = this.element?.querySelector(".login-status");
       if (status) {
         status.textContent = "Verifying credentials...";
         status.className = "login-status term-dim";
@@ -113,8 +115,17 @@ export class LoginScreen extends BaseScreen {
     }
   }
 
+  static async _hashPassword(password) {
+    const data = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
   async showResult(correct) {
-    const status = this.element?.querySelector(".login-status");
+    if (!this.active || !this.element) return;
+    const status = this.element.querySelector(".login-status");
     const crtEl = this.terminal.element?.querySelector(".terminal-crt");
 
     if (correct) {

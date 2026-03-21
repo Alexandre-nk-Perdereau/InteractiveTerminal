@@ -168,6 +168,7 @@ export class HackingScreen extends BaseScreen {
   }
 
   processRemoteAttempt(word) {
+    if (!this.active || !this.element) return;
     if (this.guesses.includes(word)) return;
     this._applyAttempt(word);
   }
@@ -245,5 +246,4 @@ export class HackingScreen extends BaseScreen {
     container.appendChild(line);
     container.scrollTop = container.scrollHeight;
   }
-
 }

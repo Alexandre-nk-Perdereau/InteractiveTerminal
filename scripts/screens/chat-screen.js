@@ -72,6 +72,7 @@ export class ChatScreen extends BaseScreen {
   }
 
   async receiveMessage(message) {
+    if (!this.active || !this.element) return;
     if (message.isUser) {
       if (message.sender === (game.user.isGM ? "ADMIN" : game.user.name)) return;
       this.messages.push(message);
@@ -135,7 +136,20 @@ export class ChatScreen extends BaseScreen {
 
     const typingDiv = document.createElement("div");
     typingDiv.classList.add("chat-message", "chat-npc", "chat-typing");
-    typingDiv.innerHTML = `<span class="chat-sender">[${msg.sender}]</span> <span class="typing-indicator"><span></span><span></span><span></span></span>`;
+
+    const typingSender = document.createElement("span");
+    typingSender.classList.add("chat-sender");
+    typingSender.textContent = `[${msg.sender}]`;
+
+    const typingIndicator = document.createElement("span");
+    typingIndicator.classList.add("typing-indicator");
+    typingIndicator.append(
+      document.createElement("span"),
+      document.createElement("span"),
+      document.createElement("span"),
+    );
+
+    typingDiv.append(typingSender, document.createTextNode(" "), typingIndicator);
     output.appendChild(typingDiv);
     this._scrollToBottom();
 

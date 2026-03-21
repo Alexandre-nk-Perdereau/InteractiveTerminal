@@ -44,13 +44,23 @@ function registerSettings() {
   });
 }
 
+// --- Utilities ---
+
+async function hashPassword(password) {
+  const data = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 // --- Socket ---
 
 function initSocket() {
   game.socket.on(`module.${MODULE_ID}`, handleSocketMessage);
 }
 
-function handleSocketMessage(data) {
+async function handleSocketMessage(data) {
   const { action, terminalId, payload, userId } = data;
   const t = moduleState.terminals.get(terminalId);
 
@@ -71,11 +81,13 @@ function handleSocketMessage(data) {
       if (game.settings.get(MODULE_ID, "enableSounds")) SoundManager.play(payload.sound, payload.volume);
     },
 
-    loginAttempt: () => {
+    loginAttempt: async () => {
       if (!game.user.isGM) return;
       const terminals = game.settings.get(MODULE_ID, "terminals");
       const config = terminals[terminalId];
-      const correct = payload.password === config?.screenConfigs?.login?.password;
+      const expectedPassword = config?.screenConfigs?.login?.password;
+      const expectedHash = await hashPassword(expectedPassword || "");
+      const correct = payload.passwordHash === expectedHash;
       emitSocket("loginResult", terminalId, { correct, userId });
       if (t) t.currentScreen?.showResult?.(correct);
       if (correct) {
@@ -205,7 +217,13 @@ function handleSocketMessage(data) {
       if (t?.currentScreen?.receiveNavigationLock) t.currentScreen.receiveNavigationLock(payload);
     },
   };
-  handlers[action]?.();
+  const handler = handlers[action];
+  if (!handler) return;
+  try {
+    await handler();
+  } catch (err) {
+    Hooks.onError(`${MODULE_ID}.handleSocketMessage`, err, { action, terminalId, notify: "warn" });
+  }
 }
 
 function emitSocket(action, terminalId, payload = {}) {

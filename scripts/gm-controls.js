@@ -665,7 +665,9 @@ export function getGmControlsApplicationClass() {
         delay: `<input type="number" class="step-param-ms gm-input" value="500" min="100" max="10000" step="100" style="width:70px;" placeholder="ms" />`,
         glitch: `<select class="step-param-type gm-input">${glitchOpts}</select>`,
         sound: `<select class="step-param-sound gm-input">${soundOpts}</select>`,
-        screen: `<select class="step-param-screen gm-input">${Object.entries(getTerminalApplicationClass().SCREENS).map(([id, cls]) => `<option value="${id}">${cls.screenName || id}</option>`).join("")}</select>`,
+        screen: `<select class="step-param-screen gm-input">${Object.entries(getTerminalApplicationClass().SCREENS)
+          .map(([id, cls]) => `<option value="${id}">${cls.screenName || id}</option>`)
+          .join("")}</select>`,
         message: `<input type="text" class="step-param-text gm-input" placeholder="Message text" style="flex:1;" /><select class="step-param-css gm-input" style="width:80px;"><option value="term-warning">Warn</option><option value="term-error">Error</option><option value="term-success">OK</option><option value="term-info">Info</option></select>`,
         lock: `<select class="step-param-locked gm-input"><option value="true">Lock</option><option value="false">Unlock</option></select>`,
       };
@@ -748,7 +750,9 @@ export function getGmControlsApplicationClass() {
     }
 
     _getFbFilesystem() {
-      return this._getFbConfig().filesystem || { id: "root", name: "root", type: "folder", hidden: false, children: [] };
+      return (
+        this._getFbConfig().filesystem || { id: "root", name: "root", type: "folder", hidden: false, children: [] }
+      );
     }
 
     _saveFbFilesystem(fs) {
@@ -922,9 +926,11 @@ export function getGmControlsApplicationClass() {
       if (!node) return;
       const folders = [];
       this._collectFolders(fs, folders, "", nodeId);
-      const options = folders.map((f) => `<option value="${f.id}">${f.path || "/ (root)"}</option>`).join("");
+      const options = folders
+        .map((f) => `<option value="${this._escapeHtml(f.id)}">${this._escapeHtml(f.path || "/ (root)")}</option>`)
+        .join("");
       const targetId = await foundry.applications.api.DialogV2.prompt({
-        window: { title: `Move "${node.name}" to...` },
+        window: { title: `Move "${this._escapeHtml(node.name)}" to...` },
         content: `<select id="fb-move-target" style="width:100%;">${options}</select>`,
         ok: {
           label: "Move",
@@ -965,7 +971,7 @@ export function getGmControlsApplicationClass() {
     async _fbPrompt(label, defaultValue = "") {
       return foundry.applications.api.DialogV2.prompt({
         window: { title: label },
-        content: `<input id="fb-prompt-input" type="text" value="${defaultValue}" style="width:100%;" autofocus />`,
+        content: `<input id="fb-prompt-input" type="text" value="${this._escapeHtml(defaultValue)}" style="width:100%;" autofocus />`,
         ok: {
           label: "OK",
           callback: (event, button) => button.form.querySelector("#fb-prompt-input")?.value?.trim() ?? "",
@@ -984,7 +990,10 @@ export function getGmControlsApplicationClass() {
       const rootDrop = document.createElement("div");
       rootDrop.classList.add("gm-fb-drop-root");
       rootDrop.textContent = "/ (root)";
-      rootDrop.addEventListener("dragover", (e) => { e.preventDefault(); rootDrop.classList.add("gm-fb-drop-hover"); });
+      rootDrop.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        rootDrop.classList.add("gm-fb-drop-hover");
+      });
       rootDrop.addEventListener("dragleave", () => rootDrop.classList.remove("gm-fb-drop-hover"));
       rootDrop.addEventListener("drop", (e) => {
         e.preventDefault();
@@ -1042,7 +1051,10 @@ export function getGmControlsApplicationClass() {
       row.addEventListener("dragend", () => row.classList.remove("gm-fb-dragging"));
 
       if (node.type === "folder") {
-        row.addEventListener("dragover", (e) => { e.preventDefault(); row.classList.add("gm-fb-drop-hover"); });
+        row.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          row.classList.add("gm-fb-drop-hover");
+        });
         row.addEventListener("dragleave", () => row.classList.remove("gm-fb-drop-hover"));
         row.addEventListener("drop", (e) => {
           e.preventDefault();
@@ -1075,7 +1087,8 @@ export function getGmControlsApplicationClass() {
       }
 
       const icon = document.createElement("i");
-      const iconClass = node.type === "folder" ? "fa-folder" : node.contentType === "image" ? "fa-image" : "fa-file-alt";
+      const iconClass =
+        node.type === "folder" ? "fa-folder" : node.contentType === "image" ? "fa-image" : "fa-file-alt";
       icon.classList.add("fas", iconClass);
       if (node.type === "folder") icon.classList.add("gm-fb-folder-icon");
       row.appendChild(icon);
@@ -1084,10 +1097,13 @@ export function getGmControlsApplicationClass() {
       name.classList.add("gm-fb-node-name");
       name.textContent = node.name;
       name.addEventListener("click", () => {
-        const targetId = node.type === "folder" ? node.id : (this._findParentNode(this._getFbFilesystem(), node.id)?.id || "root");
+        const targetId =
+          node.type === "folder" ? node.id : this._findParentNode(this._getFbFilesystem(), node.id)?.id || "root";
         this._fbSelectedParentId = targetId;
         const treeEl = this.element?.querySelector(".gm-fb-tree");
-        treeEl?.querySelectorAll(".gm-fb-node, .gm-fb-drop-root").forEach((n) => n.classList.remove("gm-fb-node-selected"));
+        treeEl
+          ?.querySelectorAll(".gm-fb-node, .gm-fb-drop-root")
+          .forEach((n) => n.classList.remove("gm-fb-node-selected"));
         row.classList.add("gm-fb-node-selected");
         const label = this.element?.querySelector(".gm-fb-target-name");
         if (label) {
@@ -1101,11 +1117,36 @@ export function getGmControlsApplicationClass() {
       actions.classList.add("gm-fb-node-actions");
 
       if (node.type === "file") {
-        actions.appendChild(this._fbBtn("fa-pen", "Edit content", (e) => { e.stopPropagation(); this._fbEditContent(node.id); }));
+        actions.appendChild(
+          this._fbBtn("fa-pen", "Edit content", (e) => {
+            e.stopPropagation();
+            this._fbEditContent(node.id);
+          }),
+        );
       }
-      actions.appendChild(this._fbBtn(node.hidden ? "fa-eye-slash" : "fa-eye", node.hidden ? "Reveal" : "Hide", (e) => { e.stopPropagation(); this._fbToggleHidden(node.id); }));
-      actions.appendChild(this._fbBtn("fa-i-cursor", "Rename", (e) => { e.stopPropagation(); this._fbRenameNode(node.id); }));
-      actions.appendChild(this._fbBtn("fa-trash", "Delete", (e) => { e.stopPropagation(); this._fbDeleteNode(node.id); }, true));
+      actions.appendChild(
+        this._fbBtn(node.hidden ? "fa-eye-slash" : "fa-eye", node.hidden ? "Reveal" : "Hide", (e) => {
+          e.stopPropagation();
+          this._fbToggleHidden(node.id);
+        }),
+      );
+      actions.appendChild(
+        this._fbBtn("fa-i-cursor", "Rename", (e) => {
+          e.stopPropagation();
+          this._fbRenameNode(node.id);
+        }),
+      );
+      actions.appendChild(
+        this._fbBtn(
+          "fa-trash",
+          "Delete",
+          (e) => {
+            e.stopPropagation();
+            this._fbDeleteNode(node.id);
+          },
+          true,
+        ),
+      );
 
       row.appendChild(actions);
       container.appendChild(row);

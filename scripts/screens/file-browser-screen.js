@@ -56,31 +56,35 @@ export class FileBrowserScreen extends BaseScreen {
 
   activateListeners(container) {
     const signal = this._abortController?.signal;
-    container.addEventListener("click", (e) => {
-      const entry = e.target.closest(".fb-entry");
-      if (entry) {
-        if (this.navigationLocked && !game.user.isGM) return;
-        if (entry.classList.contains("fb-folder")) {
-          this.navigateToFolder(entry.dataset.name);
-        } else if (entry.classList.contains("fb-file")) {
-          this.openFileById(entry.dataset.id);
+    container.addEventListener(
+      "click",
+      (e) => {
+        const entry = e.target.closest(".fb-entry");
+        if (entry) {
+          if (this.navigationLocked && !game.user.isGM) return;
+          if (entry.classList.contains("fb-folder")) {
+            this.navigateToFolder(entry.dataset.name);
+          } else if (entry.classList.contains("fb-file")) {
+            this.openFileById(entry.dataset.id);
+          }
+          return;
         }
-        return;
-      }
 
-      const breadcrumb = e.target.closest(".fb-breadcrumb");
-      if (breadcrumb) {
-        if (this.navigationLocked && !game.user.isGM) return;
-        const index = parseInt(breadcrumb.dataset.index);
-        this.navigateToBreadcrumb(index);
-        return;
-      }
+        const breadcrumb = e.target.closest(".fb-breadcrumb");
+        if (breadcrumb) {
+          if (this.navigationLocked && !game.user.isGM) return;
+          const index = parseInt(breadcrumb.dataset.index);
+          this.navigateToBreadcrumb(index);
+          return;
+        }
 
-      if (e.target.closest(".fb-back-btn")) {
-        if (this.navigationLocked && !game.user.isGM) return;
-        this.goBack();
-      }
-    }, { signal });
+        if (e.target.closest(".fb-back-btn")) {
+          if (this.navigationLocked && !game.user.isGM) return;
+          this.goBack();
+        }
+      },
+      { signal },
+    );
   }
 
   _renderView() {
@@ -301,6 +305,7 @@ export class FileBrowserScreen extends BaseScreen {
   }
 
   receiveNavigate(payload) {
+    if (!this.active || !this.element) return;
     this.currentPath = payload.currentPath || [];
     this.openFile = payload.openFile || null;
     this._renderView();
@@ -308,6 +313,7 @@ export class FileBrowserScreen extends BaseScreen {
   }
 
   receiveReveal(payload) {
+    if (!this.active || !this.element) return;
     const node = this._findNodeById(this.filesystem, payload.nodeId);
     if (node) {
       node.hidden = payload.hidden;
@@ -325,11 +331,13 @@ export class FileBrowserScreen extends BaseScreen {
     if (this.openFile && !this._findNodeById(this.filesystem, this.openFile)) {
       this.openFile = null;
     }
+    if (!this.active || !this.element) return;
     this._renderView();
   }
 
   receiveNavigationLock(payload) {
     this.navigationLocked = payload.locked;
+    if (!this.active || !this.element) return;
     this._renderView();
   }
 }

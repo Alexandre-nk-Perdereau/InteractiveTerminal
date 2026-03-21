@@ -739,14 +739,18 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-.gm-fb-node.gm-fb-dragging { opacity: 0.35; }
+.gm-fb-node.gm-fb-dragging {
+  opacity: 0.35;
+}
 
 .gm-fb-node.gm-fb-drop-hover {
   background: rgba(0, 212, 255, 0.12);
   outline: 1px dashed rgba(0, 212, 255, 0.5);
 }
 
-.gm-fb-node-selected { background: rgba(51, 255, 51, 0.08); }
+.gm-fb-node-selected {
+  background: rgba(51, 255, 51, 0.08);
+}
 
 .gm-fb-toggle {
   display: inline-block;
@@ -764,11 +768,24 @@
   flex-shrink: 0;
 }
 
-.gm-fb-toggle:hover { color: #fff; }
+.gm-fb-toggle:hover {
+  color: #fff;
+}
 
-.gm-fb-folder-icon { color: #ffb000; flex-shrink: 0; }
-.gm-fb-node .fa-file-alt { color: #8ab4f8; font-size: 11px; flex-shrink: 0; }
-.gm-fb-node .fa-image { color: #81c995; font-size: 11px; flex-shrink: 0; }
+.gm-fb-folder-icon {
+  color: #ffb000;
+  flex-shrink: 0;
+}
+.gm-fb-node .fa-file-alt {
+  color: #8ab4f8;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.gm-fb-node .fa-image {
+  color: #81c995;
+  font-size: 11px;
+  flex-shrink: 0;
+}
 
 .gm-fb-node-name {
   flex: 1;
@@ -780,8 +797,12 @@
   margin-right: 4px;
 }
 
-.gm-fb-node-hidden { opacity: 0.5; }
-.gm-fb-node-hidden .gm-fb-node-name { text-decoration: line-through; }
+.gm-fb-node-hidden {
+  opacity: 0.5;
+}
+.gm-fb-node-hidden .gm-fb-node-name {
+  text-decoration: line-through;
+}
 
 .gm-fb-node-actions {
   display: inline-flex;
@@ -792,7 +813,9 @@
   transition: opacity 0.15s;
 }
 
-.gm-fb-node:hover .gm-fb-node-actions { opacity: 1; }
+.gm-fb-node:hover .gm-fb-node-actions {
+  opacity: 1;
+}
 
 .gm-fb-action {
   display: inline-flex;
@@ -842,7 +865,6 @@
   font-size: 11px;
   color: #666;
 }
-
 
 /* ---- GM CONTROLS PANEL ---- */
 .interactive-terminal-gm-panel .window-content {
