@@ -204,6 +204,40 @@
   </section>
   {{/if}}
 
+  {{!-- Diagnostic Controls --}}
+  {{#if isDiagnosticScreen}}
+  <section class="gm-section gm-section-highlight">
+    <h3><i class="fas fa-heartbeat"></i> {{localize "ITERM.GM.DiagnosticControls"}}</h3>
+    <div class="gm-row">
+      <label class="gm-label">Gauge</label>
+      <select class="gm-diagnostic-gauge-select gm-input">
+        {{#each diagnosticGauges}}
+        <option value="{{this.id}}">{{this.label}} ({{this.value}}%)</option>
+        {{/each}}
+      </select>
+    </div>
+    <div class="gm-row">
+      <label class="gm-label">Value</label>
+      <input type="range" class="gm-diagnostic-slider" min="0" max="100" value="50" style="flex:1;" />
+      <input type="number" class="gm-diagnostic-value gm-input" min="0" max="100" value="50" style="width:55px;" />
+      <button type="button" data-action="diagnostic-setValue" class="gm-btn gm-btn-small">Set</button>
+    </div>
+    <div class="gm-row">
+      <button type="button" data-action="diagnostic-addGauge" class="gm-btn gm-btn-half gm-btn-success">
+        <i class="fas fa-plus"></i> Add Gauge
+      </button>
+      <button type="button" data-action="diagnostic-removeGauge" class="gm-btn gm-btn-half gm-btn-danger">
+        <i class="fas fa-minus"></i> Remove
+      </button>
+    </div>
+    <div class="gm-row">
+      <button type="button" data-action="diagnostic-alert" class="gm-btn gm-btn-full gm-btn-danger">
+        <i class="fas fa-exclamation-triangle"></i> System Alert
+      </button>
+    </div>
+  </section>
+  {{/if}}
+
   {{!-- File Browser Controls --}}
   {{#if isFileBrowserScreen}}
   <section class="gm-section gm-section-highlight">

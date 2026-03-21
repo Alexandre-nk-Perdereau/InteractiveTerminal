@@ -1,0 +1,20 @@
+<div class="screen-diagnostic">
+  <div class="diagnostic-header">
+    <div class="term-bold">{{localize "ITERM.Diagnostic.Title"}}</div>
+    <div class="diagnostic-system-status term-dim">{{localize "ITERM.Diagnostic.SystemStatus"}}</div>
+  </div>
+  <div class="diagnostic-gauges">
+    {{#each gauges}}
+      <div class="diagnostic-gauge" data-gauge-id="{{this.id}}">
+        <div class="diagnostic-gauge-header">
+          <span class="diagnostic-gauge-label">{{this.label}}</span>
+          <span class="diagnostic-gauge-value">{{this.value}}%</span>
+        </div>
+        <div class="terminal-progress">
+          <div class="diagnostic-gauge-bar terminal-progress-bar" style="width: {{this.value}}%"></div>
+        </div>
+        <div class="diagnostic-gauge-status term-dim"></div>
+      </div>
+    {{/each}}
+  </div>
+</div>

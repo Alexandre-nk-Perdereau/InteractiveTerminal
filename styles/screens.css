@@ -544,6 +544,151 @@
   margin-top: 8px;
 }
 
+/* ---- DIAGNOSTIC SCREEN ---- */
+.screen-diagnostic {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.diagnostic-header {
+  margin-bottom: 16px;
+}
+
+.diagnostic-system-status {
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.diagnostic-gauges {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.diagnostic-gauge {
+  padding: 0 4px;
+}
+
+.diagnostic-gauge-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.diagnostic-gauge-label {
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--term-color);
+}
+
+.diagnostic-gauge-value {
+  font-weight: bold;
+  color: var(--term-color);
+}
+
+.diagnostic-gauge-bar {
+  transition:
+    width 0.3s ease,
+    background-color 0.3s ease;
+}
+
+.diagnostic-gauge-status {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Status: normal */
+.diagnostic-gauge.diagnostic-normal .diagnostic-gauge-bar {
+  background: var(--term-color);
+  box-shadow: 0 0 8px var(--term-color-glow);
+}
+
+/* Status: warning */
+.diagnostic-gauge.diagnostic-warning .diagnostic-gauge-bar {
+  background: #ffb000;
+  box-shadow: 0 0 10px rgba(255, 176, 0, 0.5);
+}
+
+.diagnostic-gauge.diagnostic-warning .diagnostic-gauge-label,
+.diagnostic-gauge.diagnostic-warning .diagnostic-gauge-value,
+.diagnostic-gauge.diagnostic-warning .diagnostic-gauge-status {
+  color: #ffb000;
+}
+
+/* Status: critical */
+.diagnostic-gauge.diagnostic-critical .diagnostic-gauge-bar {
+  background: #ff3333;
+  box-shadow: 0 0 14px rgba(255, 51, 51, 0.7);
+  animation: diagnosticPulseBar 0.8s ease-in-out infinite;
+}
+
+.diagnostic-gauge.diagnostic-critical .diagnostic-gauge-label,
+.diagnostic-gauge.diagnostic-critical .diagnostic-gauge-value {
+  color: #ff3333;
+  animation: countdownPulse 0.8s ease-in-out infinite;
+}
+
+.diagnostic-gauge.diagnostic-critical .diagnostic-gauge-status {
+  color: #ff3333;
+}
+
+/* Status: failure */
+.diagnostic-gauge.diagnostic-failure .diagnostic-gauge-bar {
+  width: 0% !important;
+  background: #ff3333;
+}
+
+.diagnostic-gauge.diagnostic-failure .diagnostic-gauge-label,
+.diagnostic-gauge.diagnostic-failure .diagnostic-gauge-value,
+.diagnostic-gauge.diagnostic-failure .diagnostic-gauge-status {
+  color: #ff3333;
+  animation: countdownFlash 0.5s steps(2) infinite;
+}
+
+@keyframes diagnosticPulseBar {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* System alert */
+.screen-diagnostic.diagnostic-alert {
+  animation: diagnosticAlertBg 0.3s steps(2) infinite;
+}
+
+.diagnostic-alert .diagnostic-gauge {
+  animation: diagnosticAlertFlash 0.3s steps(2) infinite;
+}
+
+@keyframes diagnosticAlertBg {
+  0% {
+    background: rgba(255, 30, 30, 0.06);
+  }
+  50% {
+    background: rgba(255, 30, 30, 0.18);
+  }
+}
+
+@keyframes diagnosticAlertFlash {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* ---- BOOT SCREEN ---- */
 .screen-boot {
   display: flex;

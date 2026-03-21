@@ -209,6 +209,8 @@ export function getGmControlsApplicationClass() {
         ],
         crashPreset: selected?.screenConfigs?.crash?.preset ?? "bluescreen",
         bootNextScreen: selected?.screenConfigs?.boot?.nextScreen ?? "login",
+        isDiagnosticScreen: this._currentScreenId() === "diagnostic",
+        diagnosticGauges: selected?.screenConfigs?.diagnostic?.gauges ?? [],
         isFileBrowserScreen: this._currentScreenId() === "fileBrowser",
         fileBrowserNavLocked: selected?.screenConfigs?.fileBrowser?.navigationLocked ?? false,
       };
@@ -500,6 +502,83 @@ export function getGmControlsApplicationClass() {
         });
       });
 
+      // --- Diagnostic controls ---
+      const diagSlider = el.querySelector(".gm-diagnostic-slider");
+      const diagInput = el.querySelector(".gm-diagnostic-value");
+      const diagSelect = el.querySelector(".gm-diagnostic-gauge-select");
+      if (diagSlider && diagInput) {
+        diagSlider.addEventListener("input", () => {
+          diagInput.value = diagSlider.value;
+        });
+        diagInput.addEventListener("input", () => {
+          diagSlider.value = diagInput.value;
+        });
+        if (diagSelect) {
+          const syncValue = () => {
+            const gaugeId = diagSelect.value;
+            const gauges = this._getDiagnosticGauges();
+            const gauge = gauges.find((g) => g.id === gaugeId);
+            if (gauge) {
+              diagSlider.value = gauge.value;
+              diagInput.value = gauge.value;
+            }
+          };
+          diagSelect.addEventListener("change", syncValue);
+          syncValue();
+        }
+      }
+
+      this._on(el, "diagnostic-setValue", () => {
+        const gaugeId = el.querySelector(".gm-diagnostic-gauge-select")?.value;
+        const value = parseFloat(el.querySelector(".gm-diagnostic-value")?.value) || 0;
+        if (!gaugeId) return;
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen?.setGaugeValue) t.currentScreen.setGaugeValue(gaugeId, value);
+        emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "setGaugeValue", gaugeId, value });
+        this._updateDiagnosticGauge(gaugeId, value);
+      });
+
+      this._on(el, "diagnostic-addGauge", async () => {
+        const label = await this._fbPrompt("Gauge label:");
+        if (!label) return;
+        const gauge = { id: foundry.utils.randomID(8), label: label.toUpperCase(), value: 100, status: "normal" };
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen?.addGauge) t.currentScreen.addGauge(gauge);
+        emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "addGauge", gauge });
+        const terminals = game.settings.get(MODULE_ID, "terminals");
+        const config = terminals[this._selectedTerminalId];
+        if (config) {
+          config.screenConfigs = config.screenConfigs || {};
+          config.screenConfigs.diagnostic = config.screenConfigs.diagnostic || { gauges: [] };
+          config.screenConfigs.diagnostic.gauges.push(gauge);
+          game.settings.set(MODULE_ID, "terminals", terminals);
+        }
+        this.render();
+      });
+
+      this._on(el, "diagnostic-removeGauge", () => {
+        const gaugeId = el.querySelector(".gm-diagnostic-gauge-select")?.value;
+        if (!gaugeId) return;
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen?.removeGauge) t.currentScreen.removeGauge(gaugeId);
+        emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "removeGauge", gaugeId });
+        const terminals = game.settings.get(MODULE_ID, "terminals");
+        const config = terminals[this._selectedTerminalId];
+        if (config?.screenConfigs?.diagnostic?.gauges) {
+          config.screenConfigs.diagnostic.gauges = config.screenConfigs.diagnostic.gauges.filter(
+            (g) => g.id !== gaugeId,
+          );
+          game.settings.set(MODULE_ID, "terminals", terminals);
+        }
+        this.render();
+      });
+
+      this._on(el, "diagnostic-alert", () => {
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen?.triggerAlert) t.currentScreen.triggerAlert();
+        emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "triggerAlert" });
+      });
+
       this._on(el, "fb-lockNav", () => {
         const locked = !this._getFbConfig().navigationLocked;
         this._updateFbConfig({ navigationLocked: locked });
@@ -526,6 +605,23 @@ export function getGmControlsApplicationClass() {
 
     _on(container, actionName, handler) {
       container.querySelector(`[data-action='${actionName}']`)?.addEventListener("click", handler);
+    }
+
+    _getDiagnosticGauges() {
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      return terminals[this._selectedTerminalId]?.screenConfigs?.diagnostic?.gauges ?? [];
+    }
+
+    _updateDiagnosticGauge(gaugeId, value) {
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      const gauges = terminals[this._selectedTerminalId]?.screenConfigs?.diagnostic?.gauges;
+      if (!gauges) return;
+      const gauge = gauges.find((g) => g.id === gaugeId);
+      if (gauge) {
+        gauge.value = Math.max(0, Math.min(100, value));
+        gauge.status = value <= 0 ? "failure" : value <= 20 ? "critical" : value <= 50 ? "warning" : "normal";
+        game.settings.set(MODULE_ID, "terminals", terminals);
+      }
     }
 
     _updateTerminalConfig(partial) {

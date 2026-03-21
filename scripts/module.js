@@ -195,6 +195,17 @@ async function handleSocketMessage(data) {
       GlitchEffect.stopLoop(terminalId);
     },
 
+    diagnosticControl: () => {
+      if (t && t.currentScreen) {
+        const s = t.currentScreen;
+        const a = payload.cmd;
+        if (a === "setGaugeValue") s.setGaugeValue?.(payload.gaugeId, payload.value);
+        else if (a === "addGauge") s.addGauge?.(payload.gauge);
+        else if (a === "removeGauge") s.removeGauge?.(payload.gaugeId);
+        else if (a === "triggerAlert") s.triggerAlert?.();
+      }
+    },
+
     fileBrowserNavigate: () => {
       if (game.user.isGM) {
         const terminals = game.settings.get(MODULE_ID, "terminals");
@@ -310,6 +321,15 @@ function createNewTerminal() {
         nextScreen: "login",
         autoTransition: true,
         transitionDelay: 1500,
+      },
+      diagnostic: {
+        gauges: [
+          { id: "reactor", label: "REACTOR", value: 100, status: "normal" },
+          { id: "shields", label: "SHIELDS", value: 85, status: "normal" },
+          { id: "oxygen", label: "OXYGEN", value: 92, status: "normal" },
+          { id: "hull", label: "HULL INTEGRITY", value: 100, status: "normal" },
+          { id: "power", label: "POWER GRID", value: 78, status: "normal" },
+        ],
       },
       fileBrowser: {
         filesystem: {

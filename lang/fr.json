@@ -96,6 +96,14 @@
 
   "ITERM.Boot.NextScreen": "Ecran suivant",
 
+  "ITERM.GM.DiagnosticControls": "Controles Diagnostic",
+  "ITERM.Diagnostic.Title": "DIAGNOSTICS SYSTEME",
+  "ITERM.Diagnostic.SystemStatus": "SURVEILLANCE ACTIVE",
+  "ITERM.Diagnostic.Normal": "NOMINAL",
+  "ITERM.Diagnostic.Warning": "ATTENTION",
+  "ITERM.Diagnostic.Critical": "CRITIQUE",
+  "ITERM.Diagnostic.Failure": "HORS LIGNE",
+
   "ITERM.GM.FileBrowserControls": "Controles Navigateur de Fichiers",
   "ITERM.FileBrowser.Empty": "< vide >"
 }

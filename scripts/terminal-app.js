@@ -8,6 +8,7 @@ import { CountdownScreen } from "./screens/countdown-screen.js";
 import { CrashScreen } from "./screens/crash-screen.js";
 import { BootScreen } from "./screens/boot-screen.js";
 import { FileBrowserScreen } from "./screens/file-browser-screen.js";
+import { DiagnosticScreen } from "./screens/diagnostic-screen.js";
 import { GlitchEffect } from "./effects/glitch.js";
 import { SoundManager } from "./effects/sounds.js";
 
@@ -29,6 +30,7 @@ export function getTerminalApplicationClass() {
       crash: CrashScreen,
       boot: BootScreen,
       fileBrowser: FileBrowserScreen,
+      diagnostic: DiagnosticScreen,
     };
 
     static DEFAULT_OPTIONS = {
