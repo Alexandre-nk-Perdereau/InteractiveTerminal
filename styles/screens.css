@@ -544,6 +544,232 @@
   margin-top: 8px;
 }
 
+/* ---- EMAIL SCREEN ---- */
+.screen-email {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.iterm-email-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 4px;
+  font-size: 13px;
+}
+
+.iterm-email-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iterm-email-header-left i {
+  color: var(--term-color);
+}
+
+.iterm-email-unread-count {
+  background: var(--term-color);
+  color: var(--term-bg);
+  font-size: 10px;
+  font-weight: bold;
+  padding: 1px 6px;
+  border-radius: 8px;
+  min-width: 14px;
+  text-align: center;
+}
+
+.iterm-email-header-right {
+  font-size: 11px;
+}
+
+.iterm-email-toolbar {
+  font-size: 12px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.iterm-email-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.iterm-email-empty {
+  text-align: center;
+  padding: 40px 0;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Inbox list */
+.iterm-email-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(var(--term-color-rgb), 0.06);
+  transition: background 0.1s;
+}
+
+.iterm-email-row:hover {
+  background: rgba(var(--term-color-rgb), 0.08);
+}
+
+.iterm-email-row.iterm-email-unread {
+  border-left: 2px solid var(--term-color);
+}
+
+.iterm-email-indicator {
+  width: 10px;
+  flex-shrink: 0;
+  color: var(--term-color);
+  font-size: 8px;
+  text-align: center;
+}
+
+.iterm-email-star {
+  flex-shrink: 0;
+  width: 14px;
+  font-size: 10px;
+  color: var(--term-color-dim);
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+}
+
+.iterm-email-star:hover {
+  opacity: 0.7;
+}
+
+.iterm-email-star.iterm-email-starred {
+  color: #ffb000;
+  opacity: 1;
+}
+
+.iterm-email-from {
+  width: 120px;
+  flex-shrink: 0;
+  font-weight: bold;
+  color: var(--term-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iterm-email-unread .iterm-email-from {
+  text-shadow: 0 0 5px var(--term-color-glow);
+}
+
+.iterm-email-subject {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--term-color-dim);
+}
+
+.iterm-email-unread .iterm-email-subject {
+  color: var(--term-color);
+}
+
+.iterm-email-date {
+  flex-shrink: 0;
+  width: 45px;
+  text-align: right;
+  color: var(--term-color-dim);
+  font-size: 11px;
+}
+
+/* Email detail view */
+.iterm-email-detail-header {
+  margin-bottom: 8px;
+}
+
+.iterm-email-back-btn {
+  background: transparent;
+  border: 1px solid var(--term-color-dim);
+  color: var(--term-color);
+  font-family: var(--term-font);
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.iterm-email-back-btn:hover {
+  border-color: var(--term-color);
+  box-shadow: 0 0 6px var(--term-color-glow);
+}
+
+.iterm-email-meta {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.iterm-email-meta-row {
+  display: flex;
+  gap: 8px;
+}
+
+.iterm-email-meta-label {
+  width: 55px;
+  flex-shrink: 0;
+  color: var(--term-color-dim);
+  text-align: right;
+  font-weight: bold;
+}
+
+.iterm-email-meta-value {
+  color: var(--term-color);
+}
+
+.iterm-email-separator {
+  border-top: 1px solid var(--term-color-dim);
+  margin: 4px 0 8px;
+}
+
+.iterm-email-body {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--term-color);
+  flex: 1;
+}
+
+.iterm-email-attachments {
+  margin-top: 12px;
+  border-top: 1px solid var(--term-color-dim);
+  padding-top: 8px;
+}
+
+.iterm-email-att-label {
+  font-size: 11px;
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+
+.iterm-email-attachment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--term-color);
+  padding: 3px 0;
+}
+
+.iterm-email-attachment i {
+  color: var(--term-color-dim);
+  font-size: 11px;
+}
+
 /* ---- DIAGNOSTIC SCREEN ---- */
 .screen-diagnostic {
   display: flex;

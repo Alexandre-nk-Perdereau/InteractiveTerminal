@@ -1,0 +1,18 @@
+<div class="screen-email">
+  <div class="iterm-email-header">
+    <div class="iterm-email-header-left">
+      <i class="fas fa-envelope"></i>
+      <span class="term-bold">{{localize "ITERM.Email.Title"}}</span>
+      <span class="iterm-email-unread-count" {{#unless unreadCount}}style="display:none"{{/unless}}>{{unreadCount}}</span>
+    </div>
+    <div class="iterm-email-header-right term-dim">
+      <span>{{accountName}}</span>
+      <span class="iterm-email-total-count">({{totalCount}})</span>
+    </div>
+  </div>
+  <div class="iterm-email-toolbar term-dim">
+    ────────────────────────────────────────
+  </div>
+  <div class="iterm-email-content screen-output">
+  </div>
+</div>

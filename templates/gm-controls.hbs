@@ -204,6 +204,42 @@
   </section>
   {{/if}}
 
+  {{!-- Email Controls --}}
+  {{#if isEmailScreen}}
+  <section class="gm-section gm-section-highlight">
+    <h3><i class="fas fa-envelope"></i> {{localize "ITERM.GM.EmailControls"}}</h3>
+    <div class="gm-row">
+      <label class="gm-label">From</label>
+      <input type="text" class="gm-email-from gm-input" value="admin@corp.local" placeholder="sender@corp.local" />
+    </div>
+    <div class="gm-row">
+      <label class="gm-label">To</label>
+      <input type="text" class="gm-email-to gm-input" value="{{emailAccount}}" placeholder="user@corp.local" />
+    </div>
+    <div class="gm-row">
+      <label class="gm-label">Subject</label>
+      <input type="text" class="gm-email-subject gm-input" placeholder="Subject line..." />
+    </div>
+    <textarea class="gm-email-body gm-input" rows="5" placeholder="Email body..."></textarea>
+    <div class="gm-row">
+      <label class="gm-label">Date</label>
+      <input type="datetime-local" class="gm-email-date gm-input" />
+    </div>
+    <div class="gm-row">
+      <label class="gm-label">Attach</label>
+      <input type="text" class="gm-email-attachments gm-input" placeholder="file.pdf|2MB, data.csv|500KB" />
+    </div>
+    <div class="gm-row">
+      <button type="button" data-action="email-send" class="gm-btn gm-btn-half gm-btn-success">
+        <i class="fas fa-paper-plane"></i> {{localize "ITERM.GM.Send"}}
+      </button>
+      <button type="button" data-action="email-clear" class="gm-btn gm-btn-half gm-btn-danger">
+        <i class="fas fa-trash"></i> Clear All
+      </button>
+    </div>
+  </section>
+  {{/if}}
+
   {{!-- Diagnostic Controls --}}
   {{#if isDiagnosticScreen}}
   <section class="gm-section gm-section-highlight">

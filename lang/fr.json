@@ -96,6 +96,10 @@
 
   "ITERM.Boot.NextScreen": "Ecran suivant",
 
+  "ITERM.GM.EmailControls": "Compositeur Email",
+  "ITERM.Email.Title": "MESSAGERIE SECURISEE",
+  "ITERM.Email.Empty": "Aucun message.",
+
   "ITERM.GM.DiagnosticControls": "Controles Diagnostic",
   "ITERM.Diagnostic.Title": "DIAGNOSTICS SYSTEME",
   "ITERM.Diagnostic.SystemStatus": "SURVEILLANCE ACTIVE",

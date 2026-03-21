@@ -209,6 +209,8 @@ export function getGmControlsApplicationClass() {
         ],
         crashPreset: selected?.screenConfigs?.crash?.preset ?? "bluescreen",
         bootNextScreen: selected?.screenConfigs?.boot?.nextScreen ?? "login",
+        isEmailScreen: this._currentScreenId() === "email",
+        emailAccount: selected?.screenConfigs?.email?.accountName ?? "user@corp.local",
         isDiagnosticScreen: this._currentScreenId() === "diagnostic",
         diagnosticGauges: selected?.screenConfigs?.diagnostic?.gauges ?? [],
         isFileBrowserScreen: this._currentScreenId() === "fileBrowser",
@@ -579,6 +581,57 @@ export function getGmControlsApplicationClass() {
         emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "triggerAlert" });
       });
 
+      // --- Email controls ---
+      this._on(el, "email-send", async () => {
+        const from = el.querySelector(".gm-email-from")?.value?.trim() || "admin@corp.local";
+        const subject = el.querySelector(".gm-email-subject")?.value?.trim() || "";
+        const body = el.querySelector(".gm-email-body")?.value?.trim() || "";
+        if (!subject && !body) return;
+        const email = {
+          id: foundry.utils.randomID(8),
+          from,
+          to: el.querySelector(".gm-email-to")?.value?.trim() || "user@corp.local",
+          subject,
+          body,
+          date: el.querySelector(".gm-email-date")?.value ? new Date(el.querySelector(".gm-email-date").value).getTime() : Date.now(),
+          read: false,
+          starred: false,
+          attachments: [],
+        };
+        const attInput = el.querySelector(".gm-email-attachments")?.value?.trim();
+        if (attInput) {
+          email.attachments = attInput.split(",").map((a) => {
+            const parts = a.trim().split("|");
+            return { name: parts[0]?.trim() || "file", size: parts[1]?.trim() || "" };
+          }).filter((a) => a.name);
+        }
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen?.receiveEmail) t.currentScreen.receiveEmail(email);
+        emitSocket("emailControl", this._selectedTerminalId, { cmd: "receiveEmail", email });
+        this._persistEmail(email);
+        el.querySelector(".gm-email-subject").value = "";
+        el.querySelector(".gm-email-body").value = "";
+        if (el.querySelector(".gm-email-attachments")) el.querySelector(".gm-email-attachments").value = "";
+        ui.notifications.info(`Email sent: "${subject}"`);
+      });
+
+      this._on(el, "email-clear", async () => {
+        const confirmed = await foundry.applications.api.DialogV2.confirm({
+          window: { title: "Clear Inbox" },
+          content: "<p>Delete all emails from this terminal?</p>",
+        });
+        if (!confirmed) return;
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen?.clearAll) t.currentScreen.clearAll();
+        emitSocket("emailControl", this._selectedTerminalId, { cmd: "clearAll" });
+        const terminals = game.settings.get(MODULE_ID, "terminals");
+        const config = terminals[this._selectedTerminalId];
+        if (config?.screenConfigs?.email) {
+          config.screenConfigs.email.emails = [];
+          game.settings.set(MODULE_ID, "terminals", terminals);
+        }
+      });
+
       this._on(el, "fb-lockNav", () => {
         const locked = !this._getFbConfig().navigationLocked;
         this._updateFbConfig({ navigationLocked: locked });
@@ -605,6 +658,16 @@ export function getGmControlsApplicationClass() {
 
     _on(container, actionName, handler) {
       container.querySelector(`[data-action='${actionName}']`)?.addEventListener("click", handler);
+    }
+
+    _persistEmail(email) {
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      const config = terminals[this._selectedTerminalId];
+      if (!config) return;
+      config.screenConfigs = config.screenConfigs || {};
+      config.screenConfigs.email = config.screenConfigs.email || { emails: [] };
+      config.screenConfigs.email.emails.unshift(email);
+      game.settings.set(MODULE_ID, "terminals", terminals);
     }
 
     _getDiagnosticGauges() {

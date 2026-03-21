@@ -9,6 +9,7 @@ import { CrashScreen } from "./screens/crash-screen.js";
 import { BootScreen } from "./screens/boot-screen.js";
 import { FileBrowserScreen } from "./screens/file-browser-screen.js";
 import { DiagnosticScreen } from "./screens/diagnostic-screen.js";
+import { EmailScreen } from "./screens/email-screen.js";
 import { GlitchEffect } from "./effects/glitch.js";
 import { SoundManager } from "./effects/sounds.js";
 
@@ -31,6 +32,7 @@ export function getTerminalApplicationClass() {
       boot: BootScreen,
       fileBrowser: FileBrowserScreen,
       diagnostic: DiagnosticScreen,
+      email: EmailScreen,
     };
 
     static DEFAULT_OPTIONS = {

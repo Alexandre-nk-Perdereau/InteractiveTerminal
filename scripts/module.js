@@ -195,6 +195,17 @@ async function handleSocketMessage(data) {
       GlitchEffect.stopLoop(terminalId);
     },
 
+    emailControl: () => {
+      if (t && t.currentScreen) {
+        const s = t.currentScreen;
+        const a = payload.cmd;
+        if (a === "receiveEmail") s.receiveEmail?.(payload.email);
+        else if (a === "markRead") s.markRead?.(payload.emailId, payload.read);
+        else if (a === "deleteEmail") s.deleteEmail?.(payload.emailId);
+        else if (a === "clearAll") s.clearAll?.();
+      }
+    },
+
     diagnosticControl: () => {
       if (t && t.currentScreen) {
         const s = t.currentScreen;
@@ -321,6 +332,22 @@ function createNewTerminal() {
         nextScreen: "login",
         autoTransition: true,
         transitionDelay: 1500,
+      },
+      email: {
+        accountName: "user@corp.local",
+        emails: [
+          {
+            id: "welcome",
+            from: "admin@corp.local",
+            to: "user@corp.local",
+            subject: "Welcome to CorpNet Secure Mail",
+            body: "Your secure email account has been provisioned.\n\nPlease review the attached security policy before accessing classified materials.\n\nAll communications on this channel are monitored and logged.\n\n- System Administrator",
+            date: Date.now() - 86400000,
+            read: false,
+            starred: false,
+            attachments: [{ name: "SECURITY_POLICY_v3.2.pdf", size: "1.4 MB" }],
+          },
+        ],
       },
       diagnostic: {
         gauges: [
