@@ -208,6 +208,16 @@
   {{#if isEmailScreen}}
   <section class="gm-section gm-section-highlight">
     <h3><i class="fas fa-envelope"></i> {{localize "ITERM.GM.EmailControls"}}</h3>
+    <input type="hidden" class="gm-email-threadId" value="" />
+    <div class="gm-row">
+      <label class="gm-label">Reply to</label>
+      <select class="gm-email-reply-select gm-input">
+        <option value="">-- New email --</option>
+        {{#each emailThreads}}
+        <option value="{{this.threadId}}" data-from="{{this.from}}" data-subject="{{this.subject}}">{{this.subject}} ({{this.count}})</option>
+        {{/each}}
+      </select>
+    </div>
     <div class="gm-row">
       <label class="gm-label">From</label>
       <input type="text" class="gm-email-from gm-input" value="admin@corp.local" placeholder="sender@corp.local" />

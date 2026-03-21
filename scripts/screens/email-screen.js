@@ -18,7 +18,7 @@ export class EmailScreen extends BaseScreen {
   constructor(terminal, config = {}) {
     super(terminal, config);
     this.emails = (config.emails || []).map((e) => ({ ...e }));
-    this.openEmailId = null;
+    this.openThreadId = null;
     this.accountName = config.accountName || "user@corp.local";
   }
 
@@ -45,11 +45,11 @@ export class EmailScreen extends BaseScreen {
     container.addEventListener("click", (e) => {
       const row = e.target.closest(".iterm-email-row");
       if (row) {
-        this._openEmail(row.dataset.emailId);
+        this._openThread(row.dataset.threadId);
         return;
       }
       if (e.target.closest(".iterm-email-back-btn")) {
-        this._closeEmail();
+        this._closeThread();
         return;
       }
       const starBtn = e.target.closest(".iterm-email-star");
@@ -60,10 +60,51 @@ export class EmailScreen extends BaseScreen {
     });
   }
 
+  _getThreadId(email) {
+    return email.threadId || email.id;
+  }
+
+  _getThreads() {
+    const threadMap = new Map();
+    for (const email of this.emails) {
+      const tid = this._getThreadId(email);
+      if (!threadMap.has(tid)) threadMap.set(tid, []);
+      threadMap.get(tid).push(email);
+    }
+    for (const msgs of threadMap.values()) {
+      msgs.sort((a, b) => (a.date || 0) - (b.date || 0));
+    }
+    return threadMap;
+  }
+
+  _getThreadSummaries() {
+    const threads = this._getThreads();
+    const summaries = [];
+    for (const [threadId, messages] of threads) {
+      const latest = messages[messages.length - 1];
+      const first = messages[0];
+      const unread = messages.some((m) => !m.read);
+      const starred = messages.some((m) => m.starred);
+      const subject = first.subject || "(no subject)";
+      summaries.push({
+        threadId,
+        subject,
+        from: latest.from || "Unknown",
+        date: latest.date,
+        count: messages.length,
+        unread,
+        starred,
+        latestId: latest.id,
+      });
+    }
+    summaries.sort((a, b) => (b.date || 0) - (a.date || 0));
+    return summaries;
+  }
+
   receiveEmail(email) {
     this.emails.unshift({ ...email });
     if (this.active && this.element) {
-      if (!this.openEmailId) {
+      if (!this.openThreadId || this._getThreadId(email) === this.openThreadId) {
         this._renderView();
       } else {
         this._updateUnreadBadge();
@@ -80,27 +121,31 @@ export class EmailScreen extends BaseScreen {
 
   deleteEmail(emailId) {
     this.emails = this.emails.filter((e) => e.id !== emailId);
-    if (this.openEmailId === emailId) this.openEmailId = null;
+    if (this.openThreadId) {
+      const remaining = this.emails.filter((e) => this._getThreadId(e) === this.openThreadId);
+      if (remaining.length === 0) this.openThreadId = null;
+    }
     if (this.active && this.element) this._renderView();
   }
 
   clearAll() {
     this.emails = [];
-    this.openEmailId = null;
+    this.openThreadId = null;
     if (this.active && this.element) this._renderView();
   }
 
-  _openEmail(emailId) {
-    const email = this.emails.find((e) => e.id === emailId);
-    if (!email) return;
-    email.read = true;
-    this.openEmailId = emailId;
+  _openThread(threadId) {
+    if (!threadId) return;
+    for (const email of this.emails) {
+      if (this._getThreadId(email) === threadId) email.read = true;
+    }
+    this.openThreadId = threadId;
     this._renderView();
     SoundManager.play("keystroke");
   }
 
-  _closeEmail() {
-    this.openEmailId = null;
+  _closeThread() {
+    this.openThreadId = null;
     this._renderView();
     SoundManager.play("keystroke");
   }
@@ -126,8 +171,8 @@ export class EmailScreen extends BaseScreen {
     const content = this.element.querySelector(".iterm-email-content");
     if (!content) return;
 
-    if (this.openEmailId) {
-      this._renderDetail(content);
+    if (this.openThreadId) {
+      this._renderThread(content);
     } else {
       this._renderInbox(content);
     }
@@ -145,49 +190,57 @@ export class EmailScreen extends BaseScreen {
       return;
     }
 
-    const sorted = [...this.emails].sort((a, b) => (b.date || 0) - (a.date || 0));
+    const summaries = this._getThreadSummaries();
 
-    for (const email of sorted) {
+    for (const thread of summaries) {
       const row = document.createElement("div");
       row.classList.add("iterm-email-row");
-      if (!email.read) row.classList.add("iterm-email-unread");
-      row.dataset.emailId = email.id;
+      if (thread.unread) row.classList.add("iterm-email-unread");
+      row.dataset.threadId = thread.threadId;
 
       const indicator = document.createElement("span");
       indicator.classList.add("iterm-email-indicator");
-      indicator.textContent = email.read ? " " : "●";
+      indicator.textContent = thread.unread ? "●" : " ";
       row.appendChild(indicator);
 
       const star = document.createElement("span");
       star.classList.add("iterm-email-star");
-      star.dataset.emailId = email.id;
+      star.dataset.emailId = thread.latestId;
       star.innerHTML = `<i class="fas fa-star"></i>`;
-      if (email.starred) star.classList.add("iterm-email-starred");
+      if (thread.starred) star.classList.add("iterm-email-starred");
       row.appendChild(star);
 
       const from = document.createElement("span");
       from.classList.add("iterm-email-from");
-      from.textContent = email.from || "Unknown";
+      from.textContent = thread.from;
       row.appendChild(from);
 
       const subject = document.createElement("span");
       subject.classList.add("iterm-email-subject");
-      subject.textContent = email.subject || "(no subject)";
+      subject.textContent = thread.subject;
       row.appendChild(subject);
+
+      if (thread.count > 1) {
+        const count = document.createElement("span");
+        count.classList.add("iterm-email-thread-count");
+        count.textContent = `(${thread.count})`;
+        row.appendChild(count);
+      }
 
       const date = document.createElement("span");
       date.classList.add("iterm-email-date");
-      date.textContent = this._formatDate(email.date);
+      date.textContent = this._formatDate(thread.date);
       row.appendChild(date);
 
       content.appendChild(row);
     }
   }
 
-  _renderDetail(content) {
-    const email = this.emails.find((e) => e.id === this.openEmailId);
-    if (!email) {
-      this.openEmailId = null;
+  _renderThread(content) {
+    const threads = this._getThreads();
+    const messages = threads.get(this.openThreadId);
+    if (!messages || messages.length === 0) {
+      this.openThreadId = null;
       this._renderInbox(content);
       return;
     }
@@ -201,44 +254,64 @@ export class EmailScreen extends BaseScreen {
     backBtn.classList.add("iterm-email-back-btn");
     backBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Inbox';
     header.appendChild(backBtn);
+
+    const threadSubject = document.createElement("span");
+    threadSubject.classList.add("iterm-email-thread-subject", "term-bold");
+    threadSubject.textContent = messages[0].subject || "(no subject)";
+    header.appendChild(threadSubject);
+
+    const threadCount = document.createElement("span");
+    threadCount.classList.add("iterm-email-thread-count", "term-dim");
+    threadCount.textContent = messages.length > 1 ? ` (${messages.length} messages)` : "";
+    header.appendChild(threadCount);
+
     content.appendChild(header);
 
-    const meta = document.createElement("div");
-    meta.classList.add("iterm-email-meta");
-
-    const fields = [
-      { label: "From", value: email.from || "Unknown" },
-      { label: "To", value: email.to || this.accountName },
-      { label: "Date", value: this._formatDateFull(email.date) },
-      { label: "Subject", value: email.subject || "(no subject)" },
-    ];
-
-    for (const field of fields) {
-      const row = document.createElement("div");
-      row.classList.add("iterm-email-meta-row");
-
-      const label = document.createElement("span");
-      label.classList.add("iterm-email-meta-label");
-      label.textContent = `${field.label}:`;
-      row.appendChild(label);
-
-      const value = document.createElement("span");
-      value.classList.add("iterm-email-meta-value");
-      value.textContent = field.value;
-      row.appendChild(value);
-
-      meta.appendChild(row);
+    const reversed = [...messages].reverse();
+    for (let i = 0; i < reversed.length; i++) {
+      this._renderEmailInThread(content, reversed[i], i === 0);
     }
-    content.appendChild(meta);
+  }
+
+  _renderEmailInThread(container, email, expanded) {
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("iterm-email-thread-msg");
+    if (!expanded) wrapper.classList.add("iterm-email-thread-collapsed");
+
+    const msgHeader = document.createElement("div");
+    msgHeader.classList.add("iterm-email-thread-msg-header");
+    msgHeader.addEventListener("click", () => {
+      wrapper.classList.toggle("iterm-email-thread-collapsed");
+    });
+
+    const fromEl = document.createElement("span");
+    fromEl.classList.add("iterm-email-from");
+    fromEl.textContent = email.from || "Unknown";
+    msgHeader.appendChild(fromEl);
+
+    const dateEl = document.createElement("span");
+    dateEl.classList.add("iterm-email-date", "term-dim");
+    dateEl.textContent = this._formatDateFull(email.date);
+    msgHeader.appendChild(dateEl);
+
+    wrapper.appendChild(msgHeader);
+
+    const bodySection = document.createElement("div");
+    bodySection.classList.add("iterm-email-thread-msg-body");
+
+    const toLine = document.createElement("div");
+    toLine.classList.add("iterm-email-meta-row", "term-dim");
+    toLine.textContent = `To: ${email.to || this.accountName}`;
+    bodySection.appendChild(toLine);
 
     const separator = document.createElement("div");
     separator.classList.add("iterm-email-separator");
-    content.appendChild(separator);
+    bodySection.appendChild(separator);
 
     const body = document.createElement("div");
     body.classList.add("iterm-email-body");
     body.textContent = email.body || "";
-    content.appendChild(body);
+    bodySection.appendChild(body);
 
     if (email.attachments?.length) {
       const attSection = document.createElement("div");
@@ -266,8 +339,11 @@ export class EmailScreen extends BaseScreen {
         }
         attSection.appendChild(attRow);
       }
-      content.appendChild(attSection);
+      bodySection.appendChild(attSection);
     }
+
+    wrapper.appendChild(bodySection);
+    container.appendChild(wrapper);
   }
 
   _formatDate(timestamp) {

@@ -211,6 +211,7 @@ export function getGmControlsApplicationClass() {
         bootNextScreen: selected?.screenConfigs?.boot?.nextScreen ?? "login",
         isEmailScreen: this._currentScreenId() === "email",
         emailAccount: selected?.screenConfigs?.email?.accountName ?? "user@corp.local",
+        emailThreads: this._getEmailThreads(selected),
         isDiagnosticScreen: this._currentScreenId() === "diagnostic",
         diagnosticGauges: selected?.screenConfigs?.diagnostic?.gauges ?? [],
         isFileBrowserScreen: this._currentScreenId() === "fileBrowser",
@@ -504,7 +505,6 @@ export function getGmControlsApplicationClass() {
         });
       });
 
-      // --- Diagnostic controls ---
       const diagSlider = el.querySelector(".gm-diagnostic-slider");
       const diagInput = el.querySelector(".gm-diagnostic-value");
       const diagSelect = el.querySelector(".gm-diagnostic-gauge-select");
@@ -581,12 +581,29 @@ export function getGmControlsApplicationClass() {
         emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "triggerAlert" });
       });
 
-      // --- Email controls ---
+      const replySelect = el.querySelector(".gm-email-reply-select");
+      if (replySelect) {
+        replySelect.addEventListener("change", () => {
+          const opt = replySelect.selectedOptions[0];
+          const threadIdInput = el.querySelector(".gm-email-threadId");
+          const subjectInput = el.querySelector(".gm-email-subject");
+          if (opt.value) {
+            if (threadIdInput) threadIdInput.value = opt.value;
+            const origSubject = opt.dataset.subject || "";
+            if (subjectInput) subjectInput.value = origSubject.startsWith("RE:") ? origSubject : `RE: ${origSubject}`;
+          } else {
+            if (threadIdInput) threadIdInput.value = "";
+            if (subjectInput) subjectInput.value = "";
+          }
+        });
+      }
+
       this._on(el, "email-send", async () => {
         const from = el.querySelector(".gm-email-from")?.value?.trim() || "admin@corp.local";
         const subject = el.querySelector(".gm-email-subject")?.value?.trim() || "";
         const body = el.querySelector(".gm-email-body")?.value?.trim() || "";
         if (!subject && !body) return;
+        const threadId = el.querySelector(".gm-email-threadId")?.value?.trim() || null;
         const email = {
           id: foundry.utils.randomID(8),
           from,
@@ -598,6 +615,7 @@ export function getGmControlsApplicationClass() {
           starred: false,
           attachments: [],
         };
+        if (threadId) email.threadId = threadId;
         const attInput = el.querySelector(".gm-email-attachments")?.value?.trim();
         if (attInput) {
           email.attachments = attInput.split(",").map((a) => {
@@ -612,6 +630,8 @@ export function getGmControlsApplicationClass() {
         el.querySelector(".gm-email-subject").value = "";
         el.querySelector(".gm-email-body").value = "";
         if (el.querySelector(".gm-email-attachments")) el.querySelector(".gm-email-attachments").value = "";
+        if (el.querySelector(".gm-email-threadId")) el.querySelector(".gm-email-threadId").value = "";
+        if (replySelect) replySelect.value = "";
         ui.notifications.info(`Email sent: "${subject}"`);
       });
 
@@ -658,6 +678,20 @@ export function getGmControlsApplicationClass() {
 
     _on(container, actionName, handler) {
       container.querySelector(`[data-action='${actionName}']`)?.addEventListener("click", handler);
+    }
+
+    _getEmailThreads(selected) {
+      const emails = selected?.screenConfigs?.email?.emails || [];
+      const threadMap = new Map();
+      for (const e of emails) {
+        const tid = e.threadId || e.id;
+        if (!threadMap.has(tid)) threadMap.set(tid, { threadId: tid, subject: "", from: "", count: 0 });
+        const t = threadMap.get(tid);
+        t.count++;
+        if (!t.subject) t.subject = (e.subject || "").replace(/^RE:\s*/i, "");
+        t.from = e.from || t.from;
+      }
+      return [...threadMap.values()];
     }
 
     _persistEmail(email) {
@@ -891,7 +925,6 @@ export function getGmControlsApplicationClass() {
       this.render();
     }
 
-    // --- File Browser helpers ---
 
     _getFbConfig() {
       const terminals = game.settings.get(MODULE_ID, "terminals");

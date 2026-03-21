@@ -44,7 +44,6 @@ function registerSettings() {
   });
 }
 
-// --- Utilities ---
 
 async function hashPassword(password) {
   const data = new TextEncoder().encode(password);
@@ -54,7 +53,6 @@ async function hashPassword(password) {
     .join("");
 }
 
-// --- Socket ---
 
 function initSocket() {
   game.socket.on(`module.${MODULE_ID}`, handleSocketMessage);
@@ -109,7 +107,6 @@ async function handleSocketMessage(data) {
       if (t) t.currentScreen?.processRemoteAttempt?.(payload.word);
     },
     hackingResult: () => {
-      // Skip: sender already applied locally, GM already applied in hackingAttempt handler
       if (game.user.isGM || game.user.id === payload.userId) return;
       if (t) t.currentScreen?.processRemoteAttempt?.(payload.word);
     },
@@ -122,7 +119,6 @@ async function handleSocketMessage(data) {
       }
     },
     gmResponse: () => {
-      // Skip: GM already applied locally in sendGmResponse
       if (game.user.isGM) return;
       if (t) t.currentScreen?.receiveGmResponse?.(payload.text);
     },
@@ -134,7 +130,6 @@ async function handleSocketMessage(data) {
       if (t) t.currentScreen?.receiveMessage?.(msg);
     },
     chatBroadcast: () => {
-      // Skip: GM already applied locally in playerChat handler
       if (game.user.isGM) return;
       if (t) t.currentScreen?.receiveMessage?.(payload);
     },
@@ -252,7 +247,6 @@ function emitSocket(action, terminalId, payload = {}) {
   game.socket.emit(`module.${MODULE_ID}`, { action, terminalId, payload, userId: game.user.id });
 }
 
-// --- Terminal Management ---
 
 function openTerminal(terminalId, config = {}) {
   if (moduleState.terminals.has(terminalId)) {
@@ -407,7 +401,6 @@ function restoreDeployedTerminals() {
   }
 }
 
-// --- Macro Sequences ---
 
 async function runMacroSequence(terminalId, steps) {
   const terminal = moduleState.terminals.get(terminalId);
@@ -440,7 +433,6 @@ async function runMacroSequence(terminalId, steps) {
   }
 }
 
-// --- Command Screen ---
 
 const pendingCommands = new Map();
 
@@ -485,7 +477,6 @@ function onLocalGmCommand(terminalId, command) {
   });
 }
 
-// --- Scene Controls ---
 
 function registerSceneControls(controls) {
   const tokenControls = controls.tokens;
@@ -510,7 +501,6 @@ function openGmPanel() {
   moduleState.gmControls.render(true);
 }
 
-// --- Hooks ---
 
 Hooks.once("init", () => {
   console.log(`${MODULE_ID} | Initializing`);
@@ -525,7 +515,6 @@ Hooks.once("ready", () => {
 
 Hooks.on("getSceneControlButtons", registerSceneControls);
 
-// --- Public API ---
 
 globalThis.InteractiveTerminal = {
   MODULE_ID,

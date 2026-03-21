@@ -34,7 +34,6 @@ export class GlitchEffect {
 
     const applyTo = def.filterOnly || def.needsOverlay ? crt : target;
 
-    // Flash conflicts with the flicker animation -- pause it temporarily
     if (def.filterOnly && crt.classList.contains("flicker")) {
       crt.classList.remove("flicker");
       setTimeout(() => crt.classList.add("flicker"), customDuration ?? def.duration);
@@ -65,7 +64,6 @@ export class GlitchEffect {
     if (content) for (const cls of classes) content.classList.remove(cls);
   }
 
-  // --- Looping support ---
   static _loops = new Map();
 
   static startLoop(element, type, intervalMs = 2000, loopKey = "default") {
