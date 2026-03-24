@@ -1,5 +1,5 @@
 import { BaseScreen } from "./base-screen.js";
-import { emitSocket } from "../module.js";
+import { emitRequestAction } from "../module.js";
 import { GlitchEffect } from "../effects/glitch.js";
 import { SoundManager } from "../effects/sounds.js";
 
@@ -16,33 +16,43 @@ export class HackingScreen extends BaseScreen {
 
   static FILLER_CHARS = "!@#$%^&*(){}[]<>?/|\\;:'\",.-_+=~`";
 
+  static _seededRandom(seed) {
+    let s = 0;
+    for (let i = 0; i < seed.length; i++) s = ((s << 5) - s + seed.charCodeAt(i)) | 0;
+    return () => {
+      s = (s * 16807 + 0) % 2147483647;
+      return (s & 0x7fffffff) / 0x7fffffff;
+    };
+  }
+
   constructor(terminal, config = {}) {
     super(terminal, config);
+    this.gridSeed = config.gridSeed || foundry.utils.randomID(8);
     this.words = config.words || [
-      "OVERRIDE",
-      "TERMINAL",
+      "ARCHIVE",
+      "BREAKER",
+      "CIRCUIT",
+      "DECRYPT",
+      "EXPLOIT",
+      "FIREWAL",
+      "GATEWAY",
+      "HACKING",
+      "INSTALL",
+      "JAILBRK",
+      "KEYCARD",
+      "LOCKOUT",
+      "MALWARE",
       "NETWORK",
-      "FIREWALL",
-      "ENCRYPT",
-      "SYSTEM",
-      "SECURE",
-      "ACCESS",
-      "COMMAND",
-      "CONTROL",
-      "BREACH",
-      "BYPASS",
-      "CIPHER",
-      "DECODE",
-      "DAEMON",
-      "KERNEL",
-      "PROXY",
-      "REBOOT",
-      "SIGNAL",
-      "STREAM",
-      "BINARY",
-      "PACKET",
-      "SERVER",
-      "MODULE",
+      "OPERATE",
+      "PROGRAM",
+      "QUANTUM",
+      "REBOUND",
+      "SCANNER",
+      "TRACKER",
+      "UPLINKS",
+      "VOLTAGE",
+      "WARDENS",
+      "XCHANGE",
     ];
     this.correctWord = config.correctWord || this.words[0];
     this.maxAttempts = config.attempts || 4;
@@ -85,22 +95,86 @@ export class HackingScreen extends BaseScreen {
     });
   }
 
+  applyStateSync(screenConfig, syncMeta) {
+    const prevGuesses = [...this.guesses];
+    if (screenConfig.guesses) this.guesses = [...screenConfig.guesses];
+    if (screenConfig.attemptsLeft !== undefined) this.attemptsLeft = screenConfig.attemptsLeft;
+    if (screenConfig.solved !== undefined) this.solved = screenConfig.solved;
+    if (screenConfig.locked !== undefined) this.locked = screenConfig.locked;
+    if (screenConfig.gridSeed && screenConfig.gridSeed !== this.gridSeed) {
+      this.gridSeed = screenConfig.gridSeed;
+      if (this.active && this.element) {
+        this._generateGrid();
+        this._renderGrid();
+        this.activateListeners(this.element);
+      }
+    }
+
+    if (!this.active || !this.element) return;
+
+    const newGuesses = this.guesses.filter((w) => !prevGuesses.includes(w));
+    const output = this.element.querySelector(".hack-output");
+
+    for (const word of newGuesses) {
+      const els = this.element.querySelectorAll(`.hack-word[data-word="${word}"]`);
+      if (word === this.correctWord) {
+        els.forEach((el) => el.classList.add("hack-word-correct"));
+        SoundManager.play("granted");
+        if (output) {
+          this._addLine(output, `> ${word}`);
+          this._addLine(output, "> Exact match!", "term-success");
+          this._addLine(output, "> Entry granted.", "term-success term-glow");
+        }
+        const crt = this.terminal.element?.querySelector(".terminal-crt");
+        if (crt) {
+          const flash = document.createElement("div");
+          flash.classList.add("access-granted-flash");
+          flash.textContent = "ACCESS GRANTED";
+          crt.appendChild(flash);
+          setTimeout(() => flash.remove(), 2000);
+        }
+      } else {
+        els.forEach((el) => el.classList.add("hack-word-used"));
+        const likeness = this._likeness(word, this.correctWord);
+        SoundManager.play("denied");
+        GlitchEffect.trigger(this.terminal.element, "short");
+        if (output) {
+          this._addLine(output, `> ${word}`);
+          this._addLine(output, `> Entry denied. Likeness=${likeness}`, "term-error");
+        }
+      }
+    }
+
+    const attemptsEl = this.element.querySelector(".hack-attempts-left");
+    if (attemptsEl) attemptsEl.textContent = `${this.attemptsLeft}/${this.maxAttempts}`;
+
+    if (this.locked && newGuesses.length > 0) {
+      this._addLine(output, "");
+      this._addLine(output, "> TERMINAL LOCKED", "term-error term-glow");
+      this._addLine(output, "> Please contact an administrator.", "term-error");
+      GlitchEffect.trigger(this.terminal.element, "sustained");
+      SoundManager.play("error");
+      this.element.querySelectorAll(".hack-word").forEach((el) => el.classList.add("hack-word-used"));
+    }
+  }
+
   _generateGrid() {
+    const rng = HackingScreen._seededRandom(this.gridSeed);
     const totalChars = 32 * 16;
     const fillers = HackingScreen.FILLER_CHARS;
     const grid = Array.from({ length: totalChars }, () => ({
-      char: fillers[Math.floor(Math.random() * fillers.length)],
+      char: fillers[Math.floor(rng() * fillers.length)],
       wordIndex: -1,
     }));
 
     const placed = new Set();
-    const shuffled = [...this.words].sort(() => Math.random() - 0.5);
+    const shuffled = [...this.words].sort(() => rng() - 0.5);
 
     for (let w = 0; w < shuffled.length; w++) {
       const word = shuffled[w];
       let ok = false;
       for (let tries = 0; tries < 100 && !ok; tries++) {
-        const pos = Math.floor(Math.random() * (totalChars - word.length));
+        const pos = Math.floor(rng() * (totalChars - word.length));
         const rowStart = Math.floor(pos / 16) * 16;
         if (pos + word.length > rowStart + 16) continue;
 
@@ -158,19 +232,8 @@ export class HackingScreen extends BaseScreen {
 
   _attemptWord(word) {
     if (this.guesses.includes(word)) return;
-
-    if (game.user.isGM) {
-      this._applyAttempt(word);
-    } else {
-      emitSocket("hackingAttempt", this.terminal.terminalId, { word });
-      this._applyAttempt(word);
-    }
-  }
-
-  processRemoteAttempt(word) {
-    if (!this.active || !this.element) return;
-    if (this.guesses.includes(word)) return;
     this._applyAttempt(word);
+    emitRequestAction(this.terminal.terminalId, "hackingAttempt", { word });
   }
 
   _applyAttempt(word) {

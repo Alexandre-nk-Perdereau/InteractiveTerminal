@@ -1,5 +1,4 @@
 import { BaseScreen } from "./base-screen.js";
-import { emitSocket } from "../module.js";
 import { GlitchEffect } from "../effects/glitch.js";
 import { SoundManager } from "../effects/sounds.js";
 
@@ -44,6 +43,19 @@ export class DiagnosticScreen extends BaseScreen {
     }
     this.alertActive = false;
     super.deactivate();
+  }
+
+  applyStateSync(screenConfig, syncMeta) {
+    if (screenConfig.gauges) {
+      const prevLen = this.gauges.length;
+      const newLen = screenConfig.gauges.length;
+      this.gauges = screenConfig.gauges.map((g) => ({ ...g }));
+      if (prevLen !== newLen && this.active && this.element) {
+        this.refresh();
+      } else {
+        this._updateAllGauges();
+      }
+    }
   }
 
   setGaugeValue(gaugeId, value) {

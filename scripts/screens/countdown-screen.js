@@ -49,6 +49,32 @@ export class CountdownScreen extends BaseScreen {
     super.deactivate();
   }
 
+  applyStateSync(screenConfig) {
+    if (screenConfig.expired) {
+      this._stopInterval();
+      this.running = false;
+      this.expired = true;
+      this.remaining = 0;
+      this._updateDisplay();
+      return;
+    }
+    if (screenConfig.targetTime && screenConfig.running) {
+      this.remaining = Math.max(0, Math.ceil((screenConfig.targetTime - Date.now()) / 1000));
+      if (!this.running) {
+        this.running = true;
+        this.expired = false;
+        if (!this._interval) this._interval = setInterval(() => this._tick(), 1000);
+      }
+    } else if (screenConfig.running === false) {
+      this._stopInterval();
+      this.running = false;
+      if (screenConfig.remaining !== undefined) this.remaining = screenConfig.remaining;
+    }
+    if (screenConfig.duration !== undefined) this.duration = screenConfig.duration;
+    if (screenConfig.remaining !== undefined && !screenConfig.running) this.remaining = screenConfig.remaining;
+    this._updateDisplay();
+  }
+
   start() {
     if (this.running || this.expired) return;
     this.running = true;

@@ -1,5 +1,5 @@
 import { BaseScreen } from "./base-screen.js";
-import { emitSocket } from "../module.js";
+import { emitRequestAction } from "../module.js";
 import { SoundManager } from "../effects/sounds.js";
 
 export class CommandScreen extends BaseScreen {
@@ -23,7 +23,6 @@ export class CommandScreen extends BaseScreen {
     super(terminal, config);
     this.history = [];
     this.waiting = false;
-    this._typingAbort = null;
     this.autoResponses = config.autoResponses || [];
     this.motd = config.motd || null;
     this.hostname = config.hostname || "SYSTEM";
@@ -54,6 +53,34 @@ export class CommandScreen extends BaseScreen {
 
   activateListeners() {}
 
+  async applyStateSync(screenConfig, syncMeta) {
+    if (!screenConfig.history) return;
+    const prevCount = this.history.length;
+    const newEntries = screenConfig.history.slice(prevCount);
+    this.history = [...screenConfig.history];
+    const wasWaiting = this.waiting;
+    this.waiting = screenConfig.waiting || false;
+
+    if (!this.active || !this.element) return;
+
+    for (const entry of newEntries) {
+      if (entry.type === "command") {
+        this._appendCommand(entry.text);
+      } else if (entry.type === "response") {
+        this._removeWaitingIndicator();
+        await this._typeResponse(entry.text);
+      }
+    }
+
+    if (this.waiting && !wasWaiting) {
+      this._showWaitingIndicator();
+    } else if (!this.waiting && wasWaiting) {
+      this._removeWaitingIndicator();
+    }
+
+    this._updateTerminalInput();
+  }
+
   onInput(value) {
     if (!value || this.waiting) return;
 
@@ -74,16 +101,8 @@ export class CommandScreen extends BaseScreen {
     }
 
     this._startWaiting();
-
-    if (game.user.isGM) {
-      globalThis.InteractiveTerminal?.onLocalGmCommand?.(this.terminal.terminalId, value);
-      return;
-    }
-
-    emitSocket("playerCommand", this.terminal.terminalId, {
+    emitRequestAction(this.terminal.terminalId, "playerCommand", {
       command: value,
-      userId: game.user.id,
-      userName: game.user.name,
     });
   }
 
@@ -130,18 +149,6 @@ export class CommandScreen extends BaseScreen {
 
   _removeWaitingIndicator() {
     this.element?.querySelector(".command-waiting")?.remove();
-  }
-
-  appendRemoteCommand(command) {
-    if (!this.active || !this.element) return;
-    this._appendCommand(command);
-    this.history.push({ type: "command", text: command });
-    this._startWaiting();
-  }
-
-  async receiveGmResponse(text) {
-    if (!this.active || !this.element) return;
-    this._receiveResponse(text);
   }
 
   async _receiveResponse(text) {
@@ -234,14 +241,6 @@ export class CommandScreen extends BaseScreen {
         input.focus();
       }
     }
-  }
-
-  getPendingCommand() {
-    if (!this.waiting || this.history.length === 0) return null;
-    for (let i = this.history.length - 1; i >= 0; i--) {
-      if (this.history[i].type === "command") return this.history[i].text;
-    }
-    return null;
   }
 
   _scrollToBottom() {

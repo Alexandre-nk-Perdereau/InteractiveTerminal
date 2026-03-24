@@ -1,5 +1,5 @@
 import { BaseScreen } from "./base-screen.js";
-import { emitSocket } from "../module.js";
+import { emitRequestAction } from "../module.js";
 import { SoundManager } from "../effects/sounds.js";
 
 export class FileBrowserScreen extends BaseScreen {
@@ -259,20 +259,14 @@ export class FileBrowserScreen extends BaseScreen {
     this.openFile = null;
     this._renderView();
     SoundManager.play("keystroke");
-    emitSocket("fileBrowserNavigate", this.terminal.terminalId, {
-      currentPath: [...this.currentPath],
-      openFile: null,
-    });
+    this._emitNavigation();
   }
 
   openFileById(fileId) {
     this.openFile = fileId;
     this._renderView();
     SoundManager.play("beep");
-    emitSocket("fileBrowserNavigate", this.terminal.terminalId, {
-      currentPath: [...this.currentPath],
-      openFile: fileId,
-    });
+    this._emitNavigation();
   }
 
   goBack() {
@@ -283,10 +277,7 @@ export class FileBrowserScreen extends BaseScreen {
     }
     this._renderView();
     SoundManager.play("keystroke");
-    emitSocket("fileBrowserNavigate", this.terminal.terminalId, {
-      currentPath: [...this.currentPath],
-      openFile: this.openFile,
-    });
+    this._emitNavigation();
   }
 
   navigateToBreadcrumb(index) {
@@ -298,46 +289,34 @@ export class FileBrowserScreen extends BaseScreen {
     this.openFile = null;
     this._renderView();
     SoundManager.play("keystroke");
-    emitSocket("fileBrowserNavigate", this.terminal.terminalId, {
+    this._emitNavigation();
+  }
+
+  _emitNavigation() {
+    emitRequestAction(this.terminal.terminalId, "fileBrowserNavigate", {
       currentPath: [...this.currentPath],
-      openFile: null,
+      openFile: this.openFile,
     });
   }
 
-  receiveNavigate(payload) {
-    if (!this.active || !this.element) return;
-    this.currentPath = payload.currentPath || [];
-    this.openFile = payload.openFile || null;
-    this._renderView();
-    SoundManager.play("keystroke");
-  }
-
-  receiveReveal(payload) {
-    if (!this.active || !this.element) return;
-    const node = this._findNodeById(this.filesystem, payload.nodeId);
-    if (node) {
-      node.hidden = payload.hidden;
-      this._renderView();
+  applyStateSync(screenConfig) {
+    let changed = false;
+    if (screenConfig.filesystem) {
+      this.filesystem = screenConfig.filesystem;
+      changed = true;
     }
-  }
-
-  receiveFilesystemUpdate(payload) {
-    this.filesystem = payload.filesystem;
-    const folder = this._getNodeAtPath(this.currentPath);
-    if (!folder) {
-      this.currentPath = [];
-      this.openFile = null;
+    if (screenConfig.currentPath !== undefined) {
+      this.currentPath = screenConfig.currentPath;
+      changed = true;
     }
-    if (this.openFile && !this._findNodeById(this.filesystem, this.openFile)) {
-      this.openFile = null;
+    if (screenConfig.openFile !== undefined) {
+      this.openFile = screenConfig.openFile;
+      changed = true;
     }
-    if (!this.active || !this.element) return;
-    this._renderView();
-  }
-
-  receiveNavigationLock(payload) {
-    this.navigationLocked = payload.locked;
-    if (!this.active || !this.element) return;
-    this._renderView();
+    if (screenConfig.navigationLocked !== undefined) {
+      this.navigationLocked = screenConfig.navigationLocked;
+      changed = true;
+    }
+    if (changed && this.active && this.element) this._renderView();
   }
 }

@@ -15,13 +15,14 @@ export class DownloadScreen extends BaseScreen {
 
   constructor(terminal, config = {}) {
     super(terminal, config);
-    this.progress = 0;
+    this.progress = config.progress || 0;
     this.speed = config.speed || 2;
     this.filename = config.filename || "DATA_PACKAGE.bin";
     this.totalSize = config.totalSize || "2.4 GB";
-    this.running = false;
-    this.completed = false;
-    this.interrupted = false;
+    this.running = config.running || false;
+    this.completed = config.completed || false;
+    this.interrupted = config.interrupted || false;
+    this.log = config.log || [];
     this._interval = null;
   }
 
@@ -41,12 +42,39 @@ export class DownloadScreen extends BaseScreen {
     this.element = container;
     const html = await foundry.applications.handlebars.renderTemplate(this.template, this.getData());
     container.innerHTML = html;
+    this._renderLog();
     this._updateDisplay();
   }
 
   deactivate() {
-    this.stop();
+    this._stopInterval();
     super.deactivate();
+  }
+
+  applyStateSync(screenConfig) {
+    if (screenConfig.progress !== undefined) this.progress = screenConfig.progress;
+    if (screenConfig.completed !== undefined) this.completed = screenConfig.completed;
+    if (screenConfig.interrupted !== undefined) this.interrupted = screenConfig.interrupted;
+    if (screenConfig.running !== undefined) {
+      if (screenConfig.running && !this.running) {
+        this.running = true;
+        if (!this._interval) this._interval = setInterval(() => this._tick(), 200);
+      } else if (!screenConfig.running && this.running) {
+        this._stopInterval();
+        this.running = false;
+      }
+    }
+    if (screenConfig.log) {
+      const prevLen = this.log.length;
+      this.log = [...screenConfig.log];
+      if (this.active && this.element) {
+        const newEntries = this.log.slice(prevLen);
+        for (const entry of newEntries) {
+          this._renderLogEntry(entry);
+        }
+      }
+    }
+    this._updateDisplay();
   }
 
   start() {
@@ -54,30 +82,34 @@ export class DownloadScreen extends BaseScreen {
     this.running = true;
     this.interrupted = false;
     SoundManager.play("boot");
-    this._appendLog("Transfer started...", "term-info");
+    this._addLog("Transfer started...", "term-info");
     this._interval = setInterval(() => this._tick(), 200);
     this._updateDisplay();
   }
 
-  stop() {
-    this.running = false;
+  _stopInterval() {
     if (this._interval) {
       clearInterval(this._interval);
       this._interval = null;
     }
   }
 
+  stop() {
+    this.running = false;
+    this._stopInterval();
+  }
+
   pause() {
     if (!this.running) return;
     this.stop();
-    this._appendLog("Transfer paused.", "term-warning");
+    this._addLog("Transfer paused.", "term-warning");
     this._updateDisplay();
   }
 
   resume() {
     if (this.running || this.completed) return;
     this.running = true;
-    this._appendLog("Transfer resumed.", "term-info");
+    this._addLog("Transfer resumed.", "term-info");
     this._interval = setInterval(() => this._tick(), 200);
     this._updateDisplay();
   }
@@ -87,7 +119,7 @@ export class DownloadScreen extends BaseScreen {
     this.interrupted = true;
     GlitchEffect.trigger(this.terminal.element, "static");
     SoundManager.play("error");
-    this._appendLog("!!! TRANSFER INTERRUPTED !!!", "term-error");
+    this._addLog("!!! TRANSFER INTERRUPTED !!!", "term-error");
     this._updateDisplay();
   }
 
@@ -102,8 +134,9 @@ export class DownloadScreen extends BaseScreen {
     this.progress = 0;
     this.completed = false;
     this.interrupted = false;
-    const log = this.element?.querySelector(".download-log");
-    if (log) log.innerHTML = "";
+    this.log = [];
+    const logEl = this.element?.querySelector(".download-log");
+    if (logEl) logEl.innerHTML = "";
     this._updateDisplay();
   }
 
@@ -128,8 +161,35 @@ export class DownloadScreen extends BaseScreen {
     this.completed = true;
     SoundManager.play("success");
     GlitchEffect.trigger(this.terminal.element, "flash");
-    this._appendLog("Transfer complete.", "term-success");
+    this._addLog("Transfer complete.", "term-success");
     this._updateDisplay();
+  }
+
+  _addLog(text, cssClass = "") {
+    const entry = { text, cssClass, timestamp: Date.now() };
+    this.log.push(entry);
+    this._renderLogEntry(entry);
+  }
+
+  _renderLog() {
+    const logEl = this.element?.querySelector(".download-log");
+    if (!logEl) return;
+    logEl.innerHTML = "";
+    for (const entry of this.log) {
+      this._renderLogEntry(entry);
+    }
+  }
+
+  _renderLogEntry(entry) {
+    const logEl = this.element?.querySelector(".download-log");
+    if (!logEl) return;
+    const line = document.createElement("div");
+    line.classList.add("terminal-line");
+    if (entry.cssClass) entry.cssClass.split(" ").forEach((c) => line.classList.add(c));
+    const time = new Date(entry.timestamp).toLocaleTimeString();
+    line.textContent = `[${time}] ${entry.text}`;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
   }
 
   _updateDisplay() {
@@ -144,7 +204,6 @@ export class DownloadScreen extends BaseScreen {
 
     if (sizeInfo) {
       const downloaded = ((parseFloat(this.totalSize) * this.progress) / 100).toFixed(1);
-      const unit = this.totalSize.replace(/[\d.]/g, "").trim();
       sizeInfo.textContent = `${downloaded} / ${this.totalSize}`;
     }
 
@@ -163,16 +222,5 @@ export class DownloadScreen extends BaseScreen {
         status.className = "download-status term-dim";
       }
     }
-  }
-
-  _appendLog(text, cssClass = "") {
-    const log = this.element?.querySelector(".download-log");
-    if (!log) return;
-    const line = document.createElement("div");
-    line.classList.add("terminal-line");
-    if (cssClass) cssClass.split(" ").forEach((c) => line.classList.add(c));
-    line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
-    log.appendChild(line);
-    log.scrollTop = log.scrollHeight;
   }
 }

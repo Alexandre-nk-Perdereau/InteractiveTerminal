@@ -1,5 +1,5 @@
 import { BaseScreen } from "./base-screen.js";
-import { emitSocket } from "../module.js";
+import { emitSocket, emitRequestAction } from "../module.js";
 import { GlitchEffect } from "../effects/glitch.js";
 import { SoundManager } from "../effects/sounds.js";
 
@@ -50,7 +50,26 @@ export class LoginScreen extends BaseScreen {
     const input = html.querySelector(".login-password-input");
     if (input) {
       input.addEventListener("keydown", () => SoundManager.play("keystroke"));
+      input.addEventListener("input", () => {
+        if (this._remoteUpdate) return;
+        emitSocket("inputSync", this.terminal.terminalId, {
+          field: "login-password",
+          value: input.value.length,
+        });
+      });
       setTimeout(() => input.focus(), 500);
+    }
+  }
+
+  receiveInputSync(field, value) {
+    if (field === "login-password") {
+      const input = this.element?.querySelector(".login-password-input");
+      if (!input) return;
+      this._remoteUpdate = true;
+      input.value = "*".repeat(value);
+      this._remoteUpdate = false;
+    } else if (field === "login-status") {
+      this._setStatus(value, "login-status term-dim");
     }
   }
 
@@ -83,35 +102,40 @@ export class LoginScreen extends BaseScreen {
     }
   }
 
+  applyStateSync(screenConfig, syncMeta) {
+    if (screenConfig.attempts !== undefined) this.attempts = screenConfig.attempts;
+    if (screenConfig.locked !== undefined && screenConfig.locked && !this.locked) this._lockout();
+    if (syncMeta?.trigger === "loginAttempt" && syncMeta?.triggerData?.correct !== undefined) {
+      const input = this.element?.querySelector(".login-password-input");
+      if (input) input.value = "";
+      this.showResult(syncMeta.triggerData.correct);
+    }
+  }
+
   async _onSubmitPassword() {
     if (this.locked || !this.canInteract()) return;
     const input = this.element?.querySelector(".login-password-input");
     if (!input) return;
     const password = input.value;
     input.value = "";
+    emitSocket("inputSync", this.terminal.terminalId, { field: "login-password", value: 0 });
     if (!password) return;
 
-    this.attempts++;
-    const hashedPassword = await LoginScreen._hashPassword(password);
+    this._setStatus("Verifying credentials...", "login-status term-dim");
+    emitSocket("inputSync", this.terminal.terminalId, {
+      field: "login-status",
+      value: "Verifying credentials...",
+    });
 
-    if (game.user.isGM) {
-      const hashedExpected = await LoginScreen._hashPassword(this.config.password);
-      const correct = hashedPassword === hashedExpected;
-      this.showResult(correct);
-      if (correct) {
-        const successScreen = this.config.successScreen || "chat";
-        setTimeout(() => {
-          this.terminal.switchScreen(successScreen);
-          emitSocket("switchScreen", this.terminal.terminalId, { screen: successScreen });
-        }, 2500);
-      }
-    } else {
-      emitSocket("loginAttempt", this.terminal.terminalId, { passwordHash: hashedPassword });
-      const status = this.element?.querySelector(".login-status");
-      if (status) {
-        status.textContent = "Verifying credentials...";
-        status.className = "login-status term-dim";
-      }
+    const hashedPassword = await LoginScreen._hashPassword(password);
+    emitRequestAction(this.terminal.terminalId, "loginAttempt", { passwordHash: hashedPassword });
+  }
+
+  _setStatus(text, className) {
+    const status = this.element?.querySelector(".login-status");
+    if (status) {
+      status.textContent = text;
+      status.className = className;
     }
   }
 
@@ -134,7 +158,6 @@ export class LoginScreen extends BaseScreen {
         status.textContent = "ACCESS GRANTED";
         status.className = "login-status term-success term-glow";
       }
-
       if (crtEl) {
         const flash = document.createElement("div");
         flash.classList.add("access-granted-flash");
@@ -142,23 +165,13 @@ export class LoginScreen extends BaseScreen {
         crtEl.appendChild(flash);
         setTimeout(() => flash.remove(), 2000);
       }
-
-      const successScreen = this.config.successScreen || "chat";
-      setTimeout(() => {
-        this.terminal.switchScreen(successScreen);
-        if (game.user.isGM) {
-          emitSocket("switchScreen", this.terminal.terminalId, { screen: successScreen });
-        }
-      }, 2500);
     } else {
       SoundManager.play("denied");
       GlitchEffect.trigger(this.terminal.element, "short");
-
       if (status) {
         status.textContent = `ACCESS DENIED - Attempt ${this.attempts}/${this.maxAttempts}`;
         status.className = "login-status term-error";
       }
-
       if (crtEl) {
         const flash = document.createElement("div");
         flash.classList.add("access-denied-flash");
@@ -166,7 +179,6 @@ export class LoginScreen extends BaseScreen {
         crtEl.appendChild(flash);
         setTimeout(() => flash.remove(), 1500);
       }
-
       if (this.attempts >= this.maxAttempts) this._lockout();
     }
   }

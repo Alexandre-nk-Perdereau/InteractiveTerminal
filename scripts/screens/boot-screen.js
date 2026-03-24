@@ -64,6 +64,8 @@ export class BootScreen extends BaseScreen {
     await this._runSequence(container);
   }
 
+  applyStateSync() {}
+
   async _runSequence(container) {
     const output = container.querySelector(".screen-output");
     if (!output) return;

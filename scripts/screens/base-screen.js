@@ -58,6 +58,11 @@ export class BaseScreen {
   activateListeners(html) {}
   onInput(value) {}
 
+  applyStateSync(screenConfig, syncMeta) {
+    foundry.utils.mergeObject(this.config, screenConfig);
+    if (this.active && this.element) this.refresh();
+  }
+
   updateConfig(newConfig) {
     foundry.utils.mergeObject(this.config, newConfig);
     if (this.active && this.element) this.refresh();

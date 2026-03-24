@@ -1,5 +1,5 @@
 import { BaseScreen } from "./base-screen.js";
-import { emitSocket } from "../module.js";
+import { emitRequestAction } from "../module.js";
 import { SoundManager } from "../effects/sounds.js";
 
 export class ChatScreen extends BaseScreen {
@@ -26,7 +26,12 @@ export class ChatScreen extends BaseScreen {
   }
 
   getData() {
-    return { ...super.getData(), messages: this.messages, npcName: this.npcName };
+    return {
+      ...super.getData(),
+      messages: this.messages,
+      npcName: this.npcName,
+      userName: this._getTerminalUserName(),
+    };
   }
 
   async activate(container) {
@@ -36,11 +41,7 @@ export class ChatScreen extends BaseScreen {
     container.innerHTML = html;
     this.activateListeners(container);
 
-    if (this.messages.length === 0) {
-      await this._showWelcome();
-    } else {
-      this._renderAllMessages();
-    }
+    this._renderAllMessages();
     this._scrollToBottom();
   }
 
@@ -52,53 +53,37 @@ export class ChatScreen extends BaseScreen {
     }
   }
 
+  async applyStateSync(screenConfig, syncMeta) {
+    if (!screenConfig.messages) return;
+    const prevCount = this.messages.length;
+    const newMessages = screenConfig.messages.slice(prevCount);
+    this.messages = [...screenConfig.messages];
+    if (!this.active || !this.element || newMessages.length === 0) return;
+
+    for (const msg of newMessages) {
+      if (msg.isNpc && !msg.isUser) {
+        await this._renderMessageWithTyping(msg);
+      } else {
+        this._renderMessage(msg);
+      }
+    }
+  }
+
+  _getTerminalUserName() {
+    return this.terminal.config.screenConfigs?.login?.username || "USER";
+  }
+
   onInput(value) {
     if (!value) return;
-    const senderName = game.user.isGM ? "ADMIN" : game.user.name;
+    const senderName = this._getTerminalUserName();
     const msg = { sender: senderName, text: value, timestamp: Date.now(), isUser: true };
     this.messages.push(msg);
     this._renderMessage(msg);
     SoundManager.play("beep");
-
-    if (game.user.isGM) {
-      emitSocket("chatMessage", this.terminal.terminalId, msg);
-    } else {
-      emitSocket("playerChat", this.terminal.terminalId, {
-        text: value,
-        userId: game.user.id,
-        userName: game.user.name,
-      });
-    }
-  }
-
-  async receiveMessage(message) {
-    if (!this.active || !this.element) return;
-    if (message.isUser) {
-      if (message.sender === (game.user.isGM ? "ADMIN" : game.user.name)) return;
-      this.messages.push(message);
-      this._renderMessage(message);
-      return;
-    }
-    this.messages.push(message);
-    await this._renderMessageWithTyping(message);
-  }
-
-  sendNpcMessage(text, senderName) {
-    const msg = { sender: senderName || this.npcName, text, timestamp: Date.now(), isUser: false, isNpc: true };
-    this.messages.push(msg);
-    this._renderMessageWithTyping(msg);
-    emitSocket("chatMessage", this.terminal.terminalId, msg);
-  }
-
-  async _showWelcome() {
-    const msg = {
-      sender: this.npcName,
-      text: game.i18n.localize("ITERM.Chat.WelcomeMessage"),
-      timestamp: Date.now(),
-      isNpc: true,
-    };
-    this.messages.push(msg);
-    await this._renderMessageWithTyping(msg);
+    emitRequestAction(this.terminal.terminalId, "playerChat", {
+      text: value,
+      userName: senderName,
+    });
   }
 
   _renderAllMessages() {

@@ -1,5 +1,6 @@
 import { BaseScreen } from "./base-screen.js";
 import { SoundManager } from "../effects/sounds.js";
+import { emitRequestAction } from "../module.js";
 
 export class EmailScreen extends BaseScreen {
   static get screenId() {
@@ -18,7 +19,7 @@ export class EmailScreen extends BaseScreen {
   constructor(terminal, config = {}) {
     super(terminal, config);
     this.emails = (config.emails || []).map((e) => ({ ...e }));
-    this.openThreadId = null;
+    this.openThreadId = config.openThreadId || null;
     this.accountName = config.accountName || "user@corp.local";
   }
 
@@ -101,37 +102,14 @@ export class EmailScreen extends BaseScreen {
     return summaries;
   }
 
-  receiveEmail(email) {
-    this.emails.unshift({ ...email });
+  applyStateSync(screenConfig, syncMeta) {
+    const prevCount = this.emails.length;
+    if (screenConfig.emails) this.emails = screenConfig.emails.map((e) => ({ ...e }));
+    if (screenConfig.openThreadId !== undefined) this.openThreadId = screenConfig.openThreadId;
     if (this.active && this.element) {
-      if (!this.openThreadId || this._getThreadId(email) === this.openThreadId) {
-        this._renderView();
-      } else {
-        this._updateUnreadBadge();
-      }
-      SoundManager.play("beep");
+      this._renderView();
+      if (this.emails.length > prevCount) SoundManager.play("beep");
     }
-  }
-
-  markRead(emailId, read = true) {
-    const email = this.emails.find((e) => e.id === emailId);
-    if (email) email.read = read;
-    if (this.active && this.element) this._renderView();
-  }
-
-  deleteEmail(emailId) {
-    this.emails = this.emails.filter((e) => e.id !== emailId);
-    if (this.openThreadId) {
-      const remaining = this.emails.filter((e) => this._getThreadId(e) === this.openThreadId);
-      if (remaining.length === 0) this.openThreadId = null;
-    }
-    if (this.active && this.element) this._renderView();
-  }
-
-  clearAll() {
-    this.emails = [];
-    this.openThreadId = null;
-    if (this.active && this.element) this._renderView();
   }
 
   _openThread(threadId) {
@@ -142,12 +120,20 @@ export class EmailScreen extends BaseScreen {
     this.openThreadId = threadId;
     this._renderView();
     SoundManager.play("keystroke");
+    emitRequestAction(this.terminal.terminalId, "emailNavigate", {
+      openThreadId: threadId,
+      emails: this.emails,
+    });
   }
 
   _closeThread() {
     this.openThreadId = null;
     this._renderView();
     SoundManager.play("keystroke");
+    emitRequestAction(this.terminal.terminalId, "emailNavigate", {
+      openThreadId: null,
+      emails: this.emails,
+    });
   }
 
   _toggleStar(emailId) {
@@ -155,6 +141,10 @@ export class EmailScreen extends BaseScreen {
     if (!email) return;
     email.starred = !email.starred;
     this._renderView();
+    emitRequestAction(this.terminal.terminalId, "emailNavigate", {
+      openThreadId: this.openThreadId,
+      emails: this.emails,
+    });
   }
 
   _updateUnreadBadge() {

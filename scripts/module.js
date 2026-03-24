@@ -10,6 +10,55 @@ const moduleState = {
   gmControls: null,
 };
 
+const _persistTimers = new Map();
+function debouncedPersist(terminalId, config, delay = 500) {
+  if (_persistTimers.has(terminalId)) clearTimeout(_persistTimers.get(terminalId));
+  _persistTimers.set(
+    terminalId,
+    setTimeout(async () => {
+      _persistTimers.delete(terminalId);
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      terminals[terminalId] = config;
+      await game.settings.set(MODULE_ID, "terminals", terminals);
+    }, delay),
+  );
+}
+
+function broadcastStateSync(terminalId, trigger, triggerData = {}) {
+  const terminals = game.settings.get(MODULE_ID, "terminals");
+  const config = terminals[terminalId];
+  if (!config) return;
+  const payload = {
+    ...foundry.utils.deepClone(config),
+    _syncMeta: { timestamp: Date.now(), trigger, triggerData },
+  };
+  game.socket.emit(`module.${MODULE_ID}`, {
+    action: "stateSync",
+    terminalId,
+    payload,
+    userId: game.user.id,
+  });
+  const t = moduleState.terminals.get(terminalId);
+  if (t) t.applyStateSync(payload);
+  if (moduleState.gmControls) moduleState.gmControls.render();
+}
+
+function sendStateSyncToUser(terminalId, targetUserId) {
+  const terminals = game.settings.get(MODULE_ID, "terminals");
+  const config = terminals[terminalId];
+  if (!config) return;
+  const payload = {
+    ...foundry.utils.deepClone(config),
+    _syncMeta: { timestamp: Date.now(), trigger: "requestSync", triggerData: { targetUserId } },
+  };
+  game.socket.emit(`module.${MODULE_ID}`, {
+    action: "stateSync",
+    terminalId,
+    payload,
+    userId: game.user.id,
+  });
+}
+
 function registerSettings() {
   game.settings.register(MODULE_ID, "terminals", {
     name: "Terminal Configurations",
@@ -44,7 +93,6 @@ function registerSettings() {
   });
 }
 
-
 async function hashPassword(password) {
   const data = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -52,7 +100,6 @@ async function hashPassword(password) {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
-
 
 function initSocket() {
   game.socket.on(`module.${MODULE_ID}`, handleSocketMessage);
@@ -63,80 +110,6 @@ async function handleSocketMessage(data) {
   const t = moduleState.terminals.get(terminalId);
 
   const handlers = {
-    switchScreen: () => {
-      if (t) t.switchScreen(payload.screen);
-    },
-    chatMessage: () => {
-      if (t) t.currentScreen?.receiveMessage?.(payload);
-    },
-    updatePermissions: () => {
-      if (t) t.updatePermissions(payload);
-    },
-    triggerGlitch: () => {
-      if (t) GlitchEffect.trigger(t.element, payload.type, payload.duration);
-    },
-    playSound: () => {
-      if (game.settings.get(MODULE_ID, "enableSounds")) SoundManager.play(payload.sound, payload.volume);
-    },
-
-    loginAttempt: async () => {
-      if (!game.user.isGM) return;
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const config = terminals[terminalId];
-      const expectedPassword = config?.screenConfigs?.login?.password;
-      const expectedHash = await hashPassword(expectedPassword || "");
-      const correct = payload.passwordHash === expectedHash;
-      emitSocket("loginResult", terminalId, { correct, userId });
-      if (t) t.currentScreen?.showResult?.(correct);
-      if (correct) {
-        const successScreen = config?.screenConfigs?.login?.successScreen || "chat";
-        setTimeout(() => {
-          if (t) t.switchScreen(successScreen);
-          emitSocket("switchScreen", terminalId, { screen: successScreen });
-        }, 2500);
-      }
-    },
-    loginResult: () => {
-      if (game.user.isGM) return;
-      if (t) t.currentScreen?.showResult?.(payload.correct);
-    },
-
-    hackingAttempt: () => {
-      if (!game.user.isGM) return;
-      emitSocket("hackingResult", terminalId, { word: payload.word, userId });
-      if (t) t.currentScreen?.processRemoteAttempt?.(payload.word);
-    },
-    hackingResult: () => {
-      if (game.user.isGM || game.user.id === payload.userId) return;
-      if (t) t.currentScreen?.processRemoteAttempt?.(payload.word);
-    },
-
-    playerCommand: () => {
-      if (!game.user.isGM) return;
-      onPlayerCommand(terminalId, payload);
-      if (t?.currentScreen?.appendRemoteCommand) {
-        t.currentScreen.appendRemoteCommand(payload.command, payload.userName);
-      }
-    },
-    gmResponse: () => {
-      if (game.user.isGM) return;
-      if (t) t.currentScreen?.receiveGmResponse?.(payload.text);
-    },
-
-    playerChat: () => {
-      if (!game.user.isGM) return;
-      const msg = { sender: payload.userName || "USER", text: payload.text, timestamp: Date.now(), isUser: true };
-      emitSocket("chatBroadcast", terminalId, msg);
-      if (t) t.currentScreen?.receiveMessage?.(msg);
-    },
-    chatBroadcast: () => {
-      if (game.user.isGM) return;
-      if (t) t.currentScreen?.receiveMessage?.(payload);
-    },
-    chatMessage: () => {
-      if (t) t.currentScreen?.receiveMessage?.(payload);
-    },
-
     openTerminal: () => openTerminal(terminalId, payload),
     closeTerminal: () => {
       if (t) {
@@ -144,43 +117,8 @@ async function handleSocketMessage(data) {
         moduleState.terminals.delete(terminalId);
       }
     },
-    updateConfig: () => {
-      if (t) t.updateConfig(payload);
-    },
-    lockTerminal: () => {
-      if (t) t.setLocked(payload.locked);
-    },
-    systemMessage: () => {
-      if (t) t.showSystemMessage(payload.text, payload.cssClass);
-    },
     resetScreen: () => {
       if (t) t.resetScreen(payload.screen);
-    },
-    downloadControl: () => {
-      if (t && t.currentScreen) {
-        const s = t.currentScreen;
-        const a = payload.cmd;
-        if (a === "start") s.start?.();
-        else if (a === "pause") s.pause?.();
-        else if (a === "resume") s.resume?.();
-        else if (a === "interrupt") s.interrupt?.();
-        else if (a === "reset") s.reset?.();
-        else if (a === "setProgress") s.setProgress?.(payload.value);
-      }
-    },
-    countdownControl: () => {
-      if (t && t.currentScreen) {
-        const s = t.currentScreen;
-        const a = payload.cmd;
-        if (a === "start") s.start?.();
-        else if (a === "stop") s.stop?.();
-        else if (a === "reset") s.reset?.(payload.duration);
-        else if (a === "addTime") s.addTime?.(payload.seconds);
-        else if (a === "setTime") s.setTime?.(payload.seconds);
-      }
-    },
-    crashPreset: () => {
-      if (t && t.currentScreen?.setPreset) t.currentScreen.setPreset(payload.preset);
     },
     runMacro: () => runMacroSequence(terminalId, payload.steps),
     startGlitchLoop: () => {
@@ -190,48 +128,36 @@ async function handleSocketMessage(data) {
       GlitchEffect.stopLoop(terminalId);
     },
 
-    emailControl: () => {
-      if (t && t.currentScreen) {
-        const s = t.currentScreen;
-        const a = payload.cmd;
-        if (a === "receiveEmail") s.receiveEmail?.(payload.email);
-        else if (a === "markRead") s.markRead?.(payload.emailId, payload.read);
-        else if (a === "deleteEmail") s.deleteEmail?.(payload.emailId);
-        else if (a === "clearAll") s.clearAll?.();
-      }
+    stateSync: () => {
+      if (game.user.isGM) return;
+      const targetUserId = payload._syncMeta?.triggerData?.targetUserId;
+      if (targetUserId && targetUserId !== game.user.id) return;
+      if (t) t.applyStateSync(payload);
     },
 
-    diagnosticControl: () => {
-      if (t && t.currentScreen) {
-        const s = t.currentScreen;
-        const a = payload.cmd;
-        if (a === "setGaugeValue") s.setGaugeValue?.(payload.gaugeId, payload.value);
-        else if (a === "addGauge") s.addGauge?.(payload.gauge);
-        else if (a === "removeGauge") s.removeGauge?.(payload.gaugeId);
-        else if (a === "triggerAlert") s.triggerAlert?.();
-      }
-    },
-
-    fileBrowserNavigate: () => {
-      if (game.user.isGM) {
-        const terminals = game.settings.get(MODULE_ID, "terminals");
-        if (terminals[terminalId]?.screenConfigs?.fileBrowser) {
-          terminals[terminalId].screenConfigs.fileBrowser.currentPath = payload.currentPath;
-          terminals[terminalId].screenConfigs.fileBrowser.openFile = payload.openFile;
-          game.settings.set(MODULE_ID, "terminals", terminals);
-        }
-      }
+    inputSync: () => {
       if (game.user.id === userId) return;
-      if (t?.currentScreen?.receiveNavigate) t.currentScreen.receiveNavigate(payload);
+      if (t) t.receiveInputSync(payload.field, payload.value, userId);
     },
-    fileBrowserReveal: () => {
-      if (t?.currentScreen?.receiveReveal) t.currentScreen.receiveReveal(payload);
+
+    requestAction: async () => {
+      if (!game.user.isGM) return;
+      if (game.users.activeGM?.id !== game.user.id) return;
+      await handleRequestAction(terminalId, payload, userId);
     },
-    fileBrowserEdit: () => {
-      if (t?.currentScreen?.receiveFilesystemUpdate) t.currentScreen.receiveFilesystemUpdate(payload);
+
+    requestSync: () => {
+      if (!game.user.isGM) return;
+      if (game.users.activeGM?.id !== game.user.id) return;
+      sendStateSyncToUser(terminalId, userId);
     },
-    fileBrowserLockNav: () => {
-      if (t?.currentScreen?.receiveNavigationLock) t.currentScreen.receiveNavigationLock(payload);
+
+    ephemeralEffect: () => {
+      if (payload.type === "glitch" && t) {
+        GlitchEffect.trigger(t.element, payload.glitchType, payload.duration);
+      } else if (payload.type === "sound") {
+        if (game.settings.get(MODULE_ID, "enableSounds")) SoundManager.play(payload.sound, payload.volume);
+      }
     },
   };
   const handler = handlers[action];
@@ -243,10 +169,102 @@ async function handleSocketMessage(data) {
   }
 }
 
+async function handleRequestAction(terminalId, payload, userId) {
+  const terminals = game.settings.get(MODULE_ID, "terminals");
+  const config = terminals[terminalId];
+  if (!config) return;
+
+  const trigger = payload.type;
+  let triggerData = {};
+
+  switch (payload.type) {
+    case "playerChat": {
+      if (!config.screenConfigs.chat) config.screenConfigs.chat = { messages: [] };
+      const messages = config.screenConfigs.chat.messages;
+      const termUser = config.screenConfigs?.login?.username || "USER";
+      messages.push({
+        sender: termUser,
+        text: payload.text,
+        timestamp: Date.now(),
+        isUser: true,
+      });
+      triggerData = { newMessageIndex: messages.length - 1 };
+      break;
+    }
+    case "playerCommand": {
+      if (!config.screenConfigs.command) config.screenConfigs.command = { history: [] };
+      if (!config.screenConfigs.command.history) config.screenConfigs.command.history = [];
+      config.screenConfigs.command.history.push({
+        type: "command",
+        text: payload.command,
+      });
+      config.screenConfigs.command.waiting = true;
+      triggerData = { command: payload.command, userId };
+      onPlayerCommand(terminalId, payload);
+      break;
+    }
+    case "loginAttempt": {
+      const expectedPassword = config.screenConfigs?.login?.password;
+      const expectedHash = await hashPassword(expectedPassword || "");
+      const correct = payload.passwordHash === expectedHash;
+      if (!config.screenConfigs.login) config.screenConfigs.login = {};
+      config.screenConfigs.login.attempts = (config.screenConfigs.login.attempts || 0) + 1;
+      config.screenConfigs.login.lastResult = correct ? "granted" : "denied";
+      if (correct) {
+        const successScreen = config.screenConfigs.login.successScreen || "chat";
+        setTimeout(() => {
+          config.screen = successScreen;
+          config.screenConfigs.login.lastResult = null;
+          const allTerminals = game.settings.get(MODULE_ID, "terminals");
+          allTerminals[terminalId] = config;
+          game.settings.set(MODULE_ID, "terminals", allTerminals);
+          broadcastStateSync(terminalId, "screenSwitch", { screen: successScreen });
+        }, 2500);
+      }
+      triggerData = { correct, userId };
+      break;
+    }
+    case "hackingAttempt": {
+      if (!config.screenConfigs.hacking) break;
+      const hc = config.screenConfigs.hacking;
+      if (!hc.guesses) hc.guesses = [];
+      if (!hc.attemptsLeft && hc.attemptsLeft !== 0) hc.attemptsLeft = hc.attempts || 4;
+      const word = payload.word;
+      if (hc.guesses.includes(word) || hc.solved || hc.locked) break;
+      hc.guesses.push(word);
+      if (word === hc.correctWord) {
+        hc.solved = true;
+      } else {
+        hc.attemptsLeft = Math.max(0, hc.attemptsLeft - 1);
+        if (hc.attemptsLeft <= 0) hc.locked = true;
+      }
+      triggerData = { word, userId };
+      break;
+    }
+    case "fileBrowserNavigate": {
+      if (!config.screenConfigs.fileBrowser) break;
+      config.screenConfigs.fileBrowser.currentPath = payload.currentPath;
+      config.screenConfigs.fileBrowser.openFile = payload.openFile;
+      triggerData = { currentPath: payload.currentPath, openFile: payload.openFile };
+      break;
+    }
+    case "emailNavigate": {
+      if (!config.screenConfigs.email) break;
+      config.screenConfigs.email.openThreadId = payload.openThreadId;
+      if (payload.emails) config.screenConfigs.email.emails = payload.emails;
+      break;
+    }
+    default:
+      return;
+  }
+
+  debouncedPersist(terminalId, config);
+  broadcastStateSync(terminalId, trigger, triggerData);
+}
+
 function emitSocket(action, terminalId, payload = {}) {
   game.socket.emit(`module.${MODULE_ID}`, { action, terminalId, payload, userId: game.user.id });
 }
-
 
 function openTerminal(terminalId, config = {}) {
   if (moduleState.terminals.has(terminalId)) {
@@ -270,54 +288,87 @@ function createNewTerminal() {
     deployed: false,
     permissions: {},
     screenConfigs: {
-      login: { username: "ADMIN", password: "password", successScreen: "chat" },
-      chat: { npcName: "SYSTEM", messages: [] },
+      login: {
+        username: "ADMIN",
+        password: "password",
+        successScreen: "chat",
+        attempts: 0,
+        locked: false,
+        lastResult: null,
+      },
+      chat: {
+        npcName: "SYSTEM",
+        messages: [
+          {
+            sender: "SYSTEM",
+            text: game.i18n.localize("ITERM.Chat.WelcomeMessage"),
+            timestamp: Date.now(),
+            isNpc: true,
+          },
+        ],
+      },
       hacking: {
         words: [
-          "OVERRIDE",
-          "TERMINAL",
+          "ARCHIVE",
+          "BREAKER",
+          "CIRCUIT",
+          "DECRYPT",
+          "EXPLOIT",
+          "FIREWAL",
+          "GATEWAY",
+          "HACKING",
+          "INSTALL",
+          "JAILBRK",
+          "KEYCARD",
+          "LOCKOUT",
+          "MALWARE",
           "NETWORK",
-          "FIREWALL",
-          "ENCRYPT",
-          "SYSTEM",
-          "SECURE",
-          "ACCESS",
-          "COMMAND",
-          "CONTROL",
-          "BREACH",
-          "BYPASS",
-          "CIPHER",
-          "DECODE",
-          "DAEMON",
-          "KERNEL",
-          "PROXY",
-          "REBOOT",
-          "SIGNAL",
-          "STREAM",
-          "BINARY",
-          "PACKET",
-          "SERVER",
-          "MODULE",
+          "OPERATE",
+          "PROGRAM",
+          "QUANTUM",
+          "REBOUND",
+          "SCANNER",
+          "TRACKER",
+          "UPLINKS",
+          "VOLTAGE",
+          "WARDENS",
+          "XCHANGE",
         ],
-        correctWord: "OVERRIDE",
+        correctWord: "DECRYPT",
         attempts: 4,
+        gridSeed: foundry.utils.randomID(8),
+        guesses: [],
+        attemptsLeft: 4,
+        solved: false,
+        locked: false,
       },
       command: {
         hostname: "SYSTEM",
         prompt: ">",
         motd: "",
         autoResponses: [],
+        history: [],
+        waiting: false,
       },
       download: {
         filename: "DATA_PACKAGE.bin",
         totalSize: "2.4 GB",
         speed: 2,
+        progress: 0,
+        running: false,
+        completed: false,
+        interrupted: false,
+        log: [],
       },
       countdown: {
         duration: 300,
         label: "TIME REMAINING",
         expireAction: "none",
         expireScreen: "crash",
+        remaining: 300,
+        running: false,
+        expired: false,
+        targetTime: null,
       },
       crash: {
         preset: "bluescreen",
@@ -329,6 +380,7 @@ function createNewTerminal() {
       },
       email: {
         accountName: "user@corp.local",
+        openThreadId: null,
         emails: [
           {
             id: "welcome",
@@ -397,42 +449,100 @@ function restoreDeployedTerminals() {
   for (const [id, config] of Object.entries(terminals)) {
     if (config.deployed) {
       openTerminal(id, config);
+      if (!game.user.isGM) {
+        emitSocket("requestSync", id);
+      }
     }
   }
 }
 
+function emitRequestAction(terminalId, type, data = {}) {
+  const payload = { type, ...data };
+  if (game.user.isGM) {
+    handleRequestAction(terminalId, payload, game.user.id);
+  } else {
+    game.socket.emit(`module.${MODULE_ID}`, {
+      action: "requestAction",
+      terminalId,
+      payload,
+      userId: game.user.id,
+    });
+  }
+}
+
+function emitEphemeralEffect(terminalId, effectPayload) {
+  game.socket.emit(`module.${MODULE_ID}`, {
+    action: "ephemeralEffect",
+    terminalId,
+    payload: effectPayload,
+    userId: game.user.id,
+  });
+  const t = moduleState.terminals.get(terminalId);
+  if (effectPayload.type === "glitch" && t) {
+    GlitchEffect.trigger(t.element, effectPayload.glitchType, effectPayload.duration);
+  } else if (effectPayload.type === "sound") {
+    if (game.settings.get(MODULE_ID, "enableSounds")) SoundManager.play(effectPayload.sound, effectPayload.volume);
+  }
+}
 
 async function runMacroSequence(terminalId, steps) {
-  const terminal = moduleState.terminals.get(terminalId);
   for (const step of steps) {
     switch (step.action) {
       case "delay":
         await new Promise((r) => setTimeout(r, step.ms || 500));
         break;
       case "glitch":
-        if (terminal) GlitchEffect.trigger(terminal.element, step.type || "short");
-        emitSocket("triggerGlitch", terminalId, { type: step.type || "short" });
+        emitEphemeralEffect(terminalId, { type: "glitch", glitchType: step.type || "short" });
+        emitSocket("ephemeralEffect", terminalId, { type: "glitch", glitchType: step.type || "short" });
         break;
       case "sound":
-        SoundManager.play(step.sound || "beep");
-        emitSocket("playSound", terminalId, { sound: step.sound || "beep" });
+        emitEphemeralEffect(terminalId, { type: "sound", sound: step.sound || "beep" });
+        emitSocket("ephemeralEffect", terminalId, { type: "sound", sound: step.sound || "beep" });
         break;
-      case "screen":
-        if (terminal) terminal.switchScreen(step.screen);
-        emitSocket("switchScreen", terminalId, { screen: step.screen });
+      case "screen": {
+        const terminals = game.settings.get(MODULE_ID, "terminals");
+        if (terminals[terminalId]) {
+          terminals[terminalId].screen = step.screen;
+          game.settings.set(MODULE_ID, "terminals", terminals);
+        }
+        broadcastStateSync(terminalId, "screenSwitch");
         break;
-      case "message":
-        if (terminal) terminal.showSystemMessage(step.text, step.cssClass);
-        emitSocket("systemMessage", terminalId, { text: step.text, cssClass: step.cssClass });
+      }
+      case "message": {
+        const terminals = game.settings.get(MODULE_ID, "terminals");
+        const cfg = terminals[terminalId];
+        if (cfg) {
+          const screenId = cfg.screen || "login";
+          const sc = cfg.screenConfigs?.[screenId];
+          if (sc?.messages) {
+            sc.messages.push({
+              sender: "SYSTEM",
+              text: step.text,
+              timestamp: Date.now(),
+              isSystem: true,
+              cssClass: step.cssClass,
+            });
+          } else if (sc?.history) {
+            sc.history.push({ type: "response", text: `[SYSTEM] ${step.text}` });
+          }
+          game.settings.set(MODULE_ID, "terminals", terminals);
+        }
+        broadcastStateSync(terminalId, "systemMessage");
         break;
-      case "lock":
-        if (terminal) terminal.setLocked(step.locked ?? true);
-        emitSocket("lockTerminal", terminalId, { locked: step.locked ?? true });
+      }
+      case "lock": {
+        const locked = step.locked ?? true;
+        const terminals = game.settings.get(MODULE_ID, "terminals");
+        if (terminals[terminalId]) {
+          terminals[terminalId].locked = locked;
+          game.settings.set(MODULE_ID, "terminals", terminals);
+        }
+        broadcastStateSync(terminalId, "lockTerminal");
         break;
+      }
     }
   }
 }
-
 
 const pendingCommands = new Map();
 
@@ -462,21 +572,18 @@ function clearPendingCommand(terminalId, index = 0) {
 }
 
 function sendGmResponse(terminalId, text) {
-  const terminal = moduleState.terminals.get(terminalId);
-  if (terminal) terminal.currentScreen?.receiveGmResponse?.(text);
-  emitSocket("gmResponse", terminalId, { text });
+  const terminals = game.settings.get(MODULE_ID, "terminals");
+  const config = terminals[terminalId];
+  if (config) {
+    if (!config.screenConfigs.command) config.screenConfigs.command = { history: [] };
+    if (!config.screenConfigs.command.history) config.screenConfigs.command.history = [];
+    config.screenConfigs.command.history.push({ type: "response", text });
+    config.screenConfigs.command.waiting = false;
+    game.settings.set(MODULE_ID, "terminals", terminals);
+  }
   clearPendingCommand(terminalId);
-  if (moduleState.gmControls) moduleState.gmControls.render();
+  broadcastStateSync(terminalId, "gmResponse");
 }
-
-function onLocalGmCommand(terminalId, command) {
-  onPlayerCommand(terminalId, {
-    command,
-    userId: game.user.id,
-    userName: game.user.name,
-  });
-}
-
 
 function registerSceneControls(controls) {
   const tokenControls = controls.tokens;
@@ -501,20 +608,16 @@ function openGmPanel() {
   moduleState.gmControls.render(true);
 }
 
-
 Hooks.once("init", () => {
-  console.log(`${MODULE_ID} | Initializing`);
   registerSettings();
 });
 
 Hooks.once("ready", () => {
-  console.log(`${MODULE_ID} | Ready`);
   initSocket();
   restoreDeployedTerminals();
 });
 
 Hooks.on("getSceneControlButtons", registerSceneControls);
-
 
 globalThis.InteractiveTerminal = {
   MODULE_ID,
@@ -525,11 +628,13 @@ globalThis.InteractiveTerminal = {
   undeployTerminal,
   openGmPanel,
   emitSocket,
+  emitRequestAction,
+  emitEphemeralEffect,
+  broadcastStateSync,
   runMacroSequence,
   getPendingCommands,
   sendGmResponse,
   clearPendingCommand,
-  onLocalGmCommand,
 };
 
 export {
@@ -540,9 +645,12 @@ export {
   deployTerminal,
   undeployTerminal,
   emitSocket,
+  emitRequestAction,
+  emitEphemeralEffect,
+  broadcastStateSync,
+  debouncedPersist,
   runMacroSequence,
   getPendingCommands,
   sendGmResponse,
   clearPendingCommand,
-  onLocalGmCommand,
 };

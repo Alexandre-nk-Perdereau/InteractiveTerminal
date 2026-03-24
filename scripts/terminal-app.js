@@ -1,4 +1,4 @@
-import { MODULE_ID } from "./module.js";
+import { MODULE_ID, emitSocket } from "./module.js";
 import { LoginScreen } from "./screens/login-screen.js";
 import { ChatScreen } from "./screens/chat-screen.js";
 import { HackingScreen } from "./screens/hacking-screen.js";
@@ -101,8 +101,13 @@ export function getTerminalApplicationClass() {
             e.preventDefault();
             this._handleInput(input.value);
             input.value = "";
+            emitSocket("inputSync", this.terminalId, { field: "terminal", value: "" });
           }
           SoundManager.play("keystroke");
+        });
+        input.addEventListener("input", () => {
+          if (this._remoteUpdate) return;
+          emitSocket("inputSync", this.terminalId, { field: "terminal", value: input.value });
         });
       }
 
@@ -191,6 +196,58 @@ export function getTerminalApplicationClass() {
       }
     }
 
+    receiveInputSync(field, value, userId) {
+      if (field === "terminal") {
+        const input = this.element?.querySelector(".terminal-input");
+        if (input) {
+          this._remoteUpdate = true;
+          input.value = value;
+          this._remoteUpdate = false;
+        }
+      } else if (this.currentScreen?.receiveInputSync) {
+        this.currentScreen.receiveInputSync(field, value, userId);
+      }
+    }
+
+    applyStateSync(payload) {
+      const syncMeta = payload._syncMeta || {};
+      const newConfig = { ...payload };
+      delete newConfig._syncMeta;
+
+      const screenChanged = newConfig.screen && newConfig.screen !== this.config.screen;
+      const themeChanged = newConfig.theme && newConfig.theme !== this.config.theme;
+      const titleChanged = newConfig.title && newConfig.title !== this.config.title;
+      const lockChanged = newConfig.locked !== undefined && newConfig.locked !== this.config.locked;
+      const permsChanged =
+        newConfig.permissions && JSON.stringify(newConfig.permissions) !== JSON.stringify(this.config.permissions);
+
+      this.config = newConfig;
+
+      if (themeChanged) {
+        const crt = this.element?.querySelector(".terminal-crt");
+        if (crt) {
+          crt.className = crt.className.replace(/terminal-theme-\w+/g, "");
+          crt.classList.add(`terminal-theme-${newConfig.theme}`);
+        }
+      }
+
+      if (titleChanged) {
+        const el = this.element?.querySelector(".terminal-title");
+        if (el) el.textContent = newConfig.title;
+      }
+
+      if (lockChanged) this.setLocked(newConfig.locked);
+      if (permsChanged) this.updatePermissions(newConfig.permissions);
+
+      if (screenChanged) {
+        this.switchScreen(newConfig.screen);
+      } else if (this.currentScreen) {
+        const screenId = this.config.screen || "login";
+        const screenConfig = newConfig.screenConfigs?.[screenId] || {};
+        this.currentScreen.applyStateSync(screenConfig, syncMeta);
+      }
+    }
+
     setLocked(locked) {
       this.config.locked = locked;
       const content = this.element?.querySelector(".terminal-content");
@@ -213,15 +270,38 @@ export function getTerminalApplicationClass() {
       }
     }
 
-    showSystemMessage(text, cssClass = "term-warning") {
-      if (this.currentScreen?.active && this.currentScreen?.element) {
-        this.currentScreen.appendLine(text, `terminal-system-message ${cssClass}`);
-      }
-    }
-
     async resetScreen(screenId) {
       const sid = screenId || this.config.screen;
       delete this._screenInstances[sid];
+
+      const sc = this.config.screenConfigs?.[sid];
+      if (sc) {
+        if (sid === "hacking") {
+          sc.guesses = [];
+          sc.attemptsLeft = sc.attempts || 4;
+          sc.solved = false;
+          sc.locked = false;
+          sc.gridSeed = foundry.utils.randomID(8);
+        } else if (sid === "command") {
+          sc.history = [];
+          sc.waiting = false;
+        } else if (sid === "download") {
+          sc.progress = 0;
+          sc.running = false;
+          sc.completed = false;
+          sc.interrupted = false;
+          sc.log = [];
+        } else if (sid === "countdown") {
+          sc.remaining = sc.duration || 300;
+          sc.running = false;
+          sc.expired = false;
+          sc.targetTime = null;
+        } else if (sid === "login") {
+          sc.attempts = 0;
+          sc.locked = false;
+          sc.lastResult = null;
+        }
+      }
 
       if (this.config.screen === sid && this.element) {
         await this._activateScreen();

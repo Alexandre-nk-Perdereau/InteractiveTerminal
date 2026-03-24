@@ -2,6 +2,8 @@ import {
   MODULE_ID,
   moduleState,
   emitSocket,
+  emitEphemeralEffect,
+  broadcastStateSync,
   createNewTerminal,
   deployTerminal,
   undeployTerminal,
@@ -245,9 +247,7 @@ export function getGmControlsApplicationClass() {
         const title = el.querySelector(".gm-terminal-title")?.value?.trim();
         if (!title || !this._selectedTerminalId) return;
         this._updateTerminalConfig({ title });
-        const terminal = this.selectedTerminal;
-        if (terminal) terminal.updateConfig({ title });
-        emitSocket("updateConfig", this._selectedTerminalId, { title });
+        broadcastStateSync(this._selectedTerminalId, "updateConfig");
         ui.notifications.info("Title updated");
       });
 
@@ -275,9 +275,8 @@ export function getGmControlsApplicationClass() {
         const terminal = this.selectedTerminal;
         if (!terminal) return;
         const newLocked = !terminal.config.locked;
-        terminal.setLocked(newLocked);
         this._updateTerminalConfig({ locked: newLocked });
-        emitSocket("lockTerminal", this._selectedTerminalId, { locked: newLocked });
+        broadcastStateSync(this._selectedTerminalId, "lockTerminal");
         this.render();
       });
 
@@ -303,12 +302,10 @@ export function getGmControlsApplicationClass() {
 
       el.querySelectorAll("[data-action='switchScreen']").forEach((btn) => {
         btn.addEventListener("click", async (e) => {
-          const terminal = this.selectedTerminal;
-          if (!terminal) return;
+          if (!this.selectedTerminal) return;
           const screen = e.currentTarget.dataset.screen;
           this._updateTerminalConfig({ screen });
-          emitSocket("switchScreen", this._selectedTerminalId, { screen });
-          await terminal.switchScreen(screen);
+          broadcastStateSync(this._selectedTerminalId, "switchScreen", { screen });
           this.render();
         });
       });
@@ -317,40 +314,47 @@ export function getGmControlsApplicationClass() {
         const terminal = this.selectedTerminal;
         if (!terminal) return;
         terminal.resetScreen();
-        emitSocket("resetScreen", this._selectedTerminalId, { screen: terminal.config.screen });
+        terminal.saveConfig();
+        broadcastStateSync(this._selectedTerminalId, "resetScreen");
         ui.notifications.info("Screen reset");
       });
 
       el.querySelectorAll("[data-action='changeTheme']").forEach((btn) => {
         btn.addEventListener("click", (e) => {
-          const terminal = this.selectedTerminal;
-          if (!terminal) return;
+          if (!this.selectedTerminal) return;
           const theme = e.currentTarget.dataset.theme;
-          terminal.updateConfig({ theme });
-          emitSocket("updateConfig", this._selectedTerminalId, { theme });
           this._updateTerminalConfig({ theme });
+          broadcastStateSync(this._selectedTerminalId, "updateConfig", { theme });
         });
       });
 
       this._on(el, "updatePermissions", () => {
-        const terminal = this.selectedTerminal;
-        if (!terminal) return;
+        if (!this.selectedTerminal) return;
         const permissions = {};
         el.querySelectorAll(".gm-player-permission").forEach((cb) => {
           permissions[cb.dataset.userId] = cb.checked;
         });
-        terminal.updatePermissions(permissions);
-        emitSocket("updatePermissions", this._selectedTerminalId, permissions);
         this._updateTerminalConfig({ permissions });
+        broadcastStateSync(this._selectedTerminalId, "updatePermissions");
       });
 
       this._on(el, "sendSystemMessage", () => {
-        const terminal = this._ensureTerminalOpen();
+        if (!this._selectedTerminalId) return;
         const text = el.querySelector(".gm-system-message")?.value?.trim();
         const cssClass = el.querySelector(".gm-system-message-style")?.value || "term-warning";
         if (!text) return;
-        if (terminal) terminal.showSystemMessage(text, cssClass);
-        emitSocket("systemMessage", this._selectedTerminalId, { text, cssClass });
+        const terminals = game.settings.get(MODULE_ID, "terminals");
+        const config = terminals[this._selectedTerminalId];
+        if (!config) return;
+        const screenId = config.screen || "login";
+        const sc = config.screenConfigs?.[screenId];
+        if (sc?.messages) {
+          sc.messages.push({ sender: "SYSTEM", text, timestamp: Date.now(), isSystem: true, cssClass });
+        } else if (sc?.history) {
+          sc.history.push({ type: "response", text: `[${cssClass.includes("error") ? "ERROR" : "SYSTEM"}] ${text}` });
+        }
+        game.settings.set(MODULE_ID, "terminals", terminals);
+        broadcastStateSync(this._selectedTerminalId, "systemMessage");
         el.querySelector(".gm-system-message").value = "";
       });
 
@@ -371,7 +375,7 @@ export function getGmControlsApplicationClass() {
           const terminal = this._ensureTerminalOpen();
           const type = e.currentTarget.dataset.glitchType;
           if (terminal) GlitchEffect.trigger(terminal.element, type);
-          emitSocket("triggerGlitch", this._selectedTerminalId, { type });
+          emitEphemeralEffect(this._selectedTerminalId, { type: "glitch", glitchType: type });
         });
       });
 
@@ -397,7 +401,7 @@ export function getGmControlsApplicationClass() {
         btn.addEventListener("click", (e) => {
           const sound = e.currentTarget.dataset.sound;
           SoundManager.play(sound);
-          emitSocket("playSound", this._selectedTerminalId, { sound });
+          emitEphemeralEffect(this._selectedTerminalId, { type: "sound", sound });
         });
       });
 
@@ -448,7 +452,19 @@ export function getGmControlsApplicationClass() {
         this._on(el, `download-${cmd}`, () => {
           const t = this._ensureTerminalOpen();
           if (t?.currentScreen) t.currentScreen[cmd]?.();
-          emitSocket("downloadControl", this._selectedTerminalId, { cmd });
+          const dl = this._getScreenConfig("download");
+          if (dl) {
+            const s = t?.currentScreen;
+            if (s) {
+              dl.progress = s.progress;
+              dl.running = s.running;
+              dl.completed = s.completed;
+              dl.interrupted = s.interrupted;
+              dl.log = s.log || [];
+            }
+            this._setScreenConfig("download", dl);
+            broadcastStateSync(this._selectedTerminalId, `download-${cmd}`);
+          }
         });
       });
 
@@ -456,45 +472,78 @@ export function getGmControlsApplicationClass() {
         const val = parseFloat(el.querySelector(".gm-download-progress")?.value) || 0;
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.setProgress?.(val);
-        emitSocket("downloadControl", this._selectedTerminalId, { cmd: "setProgress", value: val });
+        const dl = this._getScreenConfig("download");
+        if (dl) {
+          dl.progress = val;
+          if (val >= 100) dl.completed = true;
+          this._setScreenConfig("download", dl);
+          broadcastStateSync(this._selectedTerminalId, "download-setProgress");
+        }
       });
 
-      ["start", "stop"].forEach((cmd) => {
-        this._on(el, `countdown-${cmd}`, () => {
-          const t = this._ensureTerminalOpen();
-          if (t?.currentScreen) t.currentScreen[cmd]?.();
-          emitSocket("countdownControl", this._selectedTerminalId, { cmd });
-        });
+      this._on(el, "countdown-start", () => {
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen) t.currentScreen.start?.();
+        const cd = this._getScreenConfig("countdown");
+        if (cd) {
+          const remaining = t?.currentScreen?.remaining ?? cd.remaining ?? cd.duration ?? 300;
+          cd.running = true;
+          cd.expired = false;
+          cd.targetTime = Date.now() + remaining * 1000;
+          cd.remaining = remaining;
+          this._setScreenConfig("countdown", cd);
+          broadcastStateSync(this._selectedTerminalId, "countdown-start");
+        }
+      });
+
+      this._on(el, "countdown-stop", () => {
+        const t = this._ensureTerminalOpen();
+        if (t?.currentScreen) t.currentScreen.stop?.();
+        const cd = this._getScreenConfig("countdown");
+        if (cd) {
+          cd.running = false;
+          cd.remaining = t?.currentScreen?.remaining ?? cd.remaining;
+          cd.targetTime = null;
+          this._setScreenConfig("countdown", cd);
+          broadcastStateSync(this._selectedTerminalId, "countdown-stop");
+        }
       });
 
       this._on(el, "countdown-reset", () => {
         const dur = parseInt(el.querySelector(".gm-countdown-duration")?.value) || 300;
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.reset?.(dur);
-        emitSocket("countdownControl", this._selectedTerminalId, { cmd: "reset", duration: dur });
+        const cd = this._getScreenConfig("countdown");
+        if (cd) {
+          cd.running = false;
+          cd.expired = false;
+          cd.duration = dur;
+          cd.remaining = dur;
+          cd.targetTime = null;
+          this._setScreenConfig("countdown", cd);
+          broadcastStateSync(this._selectedTerminalId, "countdown-reset");
+        }
       });
 
       this._on(el, "countdown-addTime", () => {
         const sec = parseInt(el.querySelector(".gm-countdown-add")?.value) || 30;
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.addTime?.(sec);
-        emitSocket("countdownControl", this._selectedTerminalId, { cmd: "addTime", seconds: sec });
+        this._adjustCountdownTime(sec, t);
       });
 
       this._on(el, "countdown-subTime", () => {
         const sec = parseInt(el.querySelector(".gm-countdown-add")?.value) || 30;
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.addTime?.(-sec);
-        emitSocket("countdownControl", this._selectedTerminalId, { cmd: "addTime", seconds: -sec });
+        this._adjustCountdownTime(-sec, t);
       });
 
       el.querySelectorAll("[data-action='setCrashPreset']").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const preset = e.currentTarget.dataset.preset;
-          const t = this._ensureTerminalOpen();
-          if (t?.currentScreen?.setPreset) t.currentScreen.setPreset(preset);
-          emitSocket("crashPreset", this._selectedTerminalId, { preset });
           this._updateTerminalConfig({ screenConfigs: { crash: { preset } } });
+          broadcastStateSync(this._selectedTerminalId, "crashPreset", { preset });
         });
       });
 
@@ -534,19 +583,14 @@ export function getGmControlsApplicationClass() {
         const gaugeId = el.querySelector(".gm-diagnostic-gauge-select")?.value;
         const value = parseFloat(el.querySelector(".gm-diagnostic-value")?.value) || 0;
         if (!gaugeId) return;
-        const t = this._ensureTerminalOpen();
-        if (t?.currentScreen?.setGaugeValue) t.currentScreen.setGaugeValue(gaugeId, value);
-        emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "setGaugeValue", gaugeId, value });
         this._updateDiagnosticGauge(gaugeId, value);
+        broadcastStateSync(this._selectedTerminalId, "diagnostic-setValue");
       });
 
       this._on(el, "diagnostic-addGauge", async () => {
         const label = await this._fbPrompt("Gauge label:");
         if (!label) return;
         const gauge = { id: foundry.utils.randomID(8), label: label.toUpperCase(), value: 100, status: "normal" };
-        const t = this._ensureTerminalOpen();
-        if (t?.currentScreen?.addGauge) t.currentScreen.addGauge(gauge);
-        emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "addGauge", gauge });
         const terminals = game.settings.get(MODULE_ID, "terminals");
         const config = terminals[this._selectedTerminalId];
         if (config) {
@@ -555,15 +599,13 @@ export function getGmControlsApplicationClass() {
           config.screenConfigs.diagnostic.gauges.push(gauge);
           game.settings.set(MODULE_ID, "terminals", terminals);
         }
+        broadcastStateSync(this._selectedTerminalId, "diagnostic-addGauge");
         this.render();
       });
 
       this._on(el, "diagnostic-removeGauge", () => {
         const gaugeId = el.querySelector(".gm-diagnostic-gauge-select")?.value;
         if (!gaugeId) return;
-        const t = this._ensureTerminalOpen();
-        if (t?.currentScreen?.removeGauge) t.currentScreen.removeGauge(gaugeId);
-        emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "removeGauge", gaugeId });
         const terminals = game.settings.get(MODULE_ID, "terminals");
         const config = terminals[this._selectedTerminalId];
         if (config?.screenConfigs?.diagnostic?.gauges) {
@@ -572,13 +614,15 @@ export function getGmControlsApplicationClass() {
           );
           game.settings.set(MODULE_ID, "terminals", terminals);
         }
+        broadcastStateSync(this._selectedTerminalId, "diagnostic-removeGauge");
         this.render();
       });
 
       this._on(el, "diagnostic-alert", () => {
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen?.triggerAlert) t.currentScreen.triggerAlert();
-        emitSocket("diagnosticControl", this._selectedTerminalId, { cmd: "triggerAlert" });
+        emitEphemeralEffect(this._selectedTerminalId, { type: "glitch", glitchType: "flash" });
+        emitEphemeralEffect(this._selectedTerminalId, { type: "sound", sound: "alarm" });
       });
 
       const replySelect = el.querySelector(".gm-email-reply-select");
@@ -610,7 +654,9 @@ export function getGmControlsApplicationClass() {
           to: el.querySelector(".gm-email-to")?.value?.trim() || "user@corp.local",
           subject,
           body,
-          date: el.querySelector(".gm-email-date")?.value ? new Date(el.querySelector(".gm-email-date").value).getTime() : Date.now(),
+          date: el.querySelector(".gm-email-date")?.value
+            ? new Date(el.querySelector(".gm-email-date").value).getTime()
+            : Date.now(),
           read: false,
           starred: false,
           attachments: [],
@@ -618,15 +664,16 @@ export function getGmControlsApplicationClass() {
         if (threadId) email.threadId = threadId;
         const attInput = el.querySelector(".gm-email-attachments")?.value?.trim();
         if (attInput) {
-          email.attachments = attInput.split(",").map((a) => {
-            const parts = a.trim().split("|");
-            return { name: parts[0]?.trim() || "file", size: parts[1]?.trim() || "" };
-          }).filter((a) => a.name);
+          email.attachments = attInput
+            .split(",")
+            .map((a) => {
+              const parts = a.trim().split("|");
+              return { name: parts[0]?.trim() || "file", size: parts[1]?.trim() || "" };
+            })
+            .filter((a) => a.name);
         }
-        const t = this._ensureTerminalOpen();
-        if (t?.currentScreen?.receiveEmail) t.currentScreen.receiveEmail(email);
-        emitSocket("emailControl", this._selectedTerminalId, { cmd: "receiveEmail", email });
         this._persistEmail(email);
+        broadcastStateSync(this._selectedTerminalId, "email-receive");
         el.querySelector(".gm-email-subject").value = "";
         el.querySelector(".gm-email-body").value = "";
         if (el.querySelector(".gm-email-attachments")) el.querySelector(".gm-email-attachments").value = "";
@@ -641,31 +688,25 @@ export function getGmControlsApplicationClass() {
           content: "<p>Delete all emails from this terminal?</p>",
         });
         if (!confirmed) return;
-        const t = this._ensureTerminalOpen();
-        if (t?.currentScreen?.clearAll) t.currentScreen.clearAll();
-        emitSocket("emailControl", this._selectedTerminalId, { cmd: "clearAll" });
         const terminals = game.settings.get(MODULE_ID, "terminals");
         const config = terminals[this._selectedTerminalId];
         if (config?.screenConfigs?.email) {
           config.screenConfigs.email.emails = [];
           game.settings.set(MODULE_ID, "terminals", terminals);
         }
+        broadcastStateSync(this._selectedTerminalId, "email-clear");
       });
 
       this._on(el, "fb-lockNav", () => {
         const locked = !this._getFbConfig().navigationLocked;
         this._updateFbConfig({ navigationLocked: locked });
-        const t = this._ensureTerminalOpen();
-        if (t?.currentScreen?.receiveNavigationLock) t.currentScreen.receiveNavigationLock({ locked });
-        emitSocket("fileBrowserLockNav", this._selectedTerminalId, { locked });
+        broadcastStateSync(this._selectedTerminalId, "fb-lockNav");
         this.render();
       });
 
       this._on(el, "fb-forceHome", () => {
-        const t = this._ensureTerminalOpen();
-        if (t?.currentScreen?.receiveNavigate) t.currentScreen.receiveNavigate({ currentPath: [], openFile: null });
-        emitSocket("fileBrowserNavigate", this._selectedTerminalId, { currentPath: [], openFile: null });
         this._updateFbConfig({ currentPath: [], openFile: null });
+        broadcastStateSync(this._selectedTerminalId, "fb-forceHome");
       });
 
       this._on(el, "fb-addFolder", () => this._fbAddNode("folder"));
@@ -721,6 +762,31 @@ export function getGmControlsApplicationClass() {
       }
     }
 
+    _getScreenConfig(screenId) {
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      return terminals[this._selectedTerminalId]?.screenConfigs?.[screenId] || null;
+    }
+
+    _setScreenConfig(screenId, config) {
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      const termConfig = terminals[this._selectedTerminalId];
+      if (!termConfig) return;
+      termConfig.screenConfigs = termConfig.screenConfigs || {};
+      termConfig.screenConfigs[screenId] = config;
+      game.settings.set(MODULE_ID, "terminals", terminals);
+    }
+
+    _adjustCountdownTime(seconds, terminal) {
+      const cd = this._getScreenConfig("countdown");
+      if (!cd) return;
+      cd.remaining = Math.max(0, (terminal?.currentScreen?.remaining ?? cd.remaining ?? 0) + seconds);
+      if (cd.running && cd.remaining > 0) {
+        cd.targetTime = Date.now() + cd.remaining * 1000;
+      }
+      this._setScreenConfig("countdown", cd);
+      broadcastStateSync(this._selectedTerminalId, "countdown-addTime");
+    }
+
     _updateTerminalConfig(partial) {
       const terminals = game.settings.get(MODULE_ID, "terminals");
       if (!terminals[this._selectedTerminalId]) return;
@@ -729,31 +795,28 @@ export function getGmControlsApplicationClass() {
     }
 
     _sendNpcMessage() {
-      const terminal = this.selectedTerminal;
-      if (!terminal) return;
+      if (!this._selectedTerminalId) return;
       const textarea = this.element.querySelector(".gm-npc-message");
       const nameInput = this.element.querySelector(".gm-npc-name");
       const text = textarea?.value?.trim();
       const npcName = nameInput?.value?.trim() || "SYSTEM";
       if (!text) return;
 
-      const chatScreen = terminal._screenInstances?.chat;
-      if (chatScreen) {
-        chatScreen.sendNpcMessage(text, npcName);
-      } else {
-        emitSocket("chatMessage", this._selectedTerminalId, {
-          sender: npcName,
-          text,
-          timestamp: Date.now(),
-          isNpc: true,
-        });
+      const msg = { sender: npcName, text, timestamp: Date.now(), isNpc: true };
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      const config = terminals[this._selectedTerminalId];
+      if (config) {
+        config.screenConfigs = config.screenConfigs || {};
+        config.screenConfigs.chat = config.screenConfigs.chat || { messages: [] };
+        config.screenConfigs.chat.messages.push(msg);
+        game.settings.set(MODULE_ID, "terminals", terminals);
       }
+      broadcastStateSync(this._selectedTerminalId, "chatMessage");
       textarea.value = "";
     }
 
     _saveScreenConfig(form) {
-      const terminal = this.selectedTerminal;
-      if (!terminal) return;
+      if (!this._selectedTerminalId) return;
       const formData = new FormData(form);
       const screenId = formData.get("screenId");
       const config = {};
@@ -770,10 +833,13 @@ export function getGmControlsApplicationClass() {
           config[key] = value;
         }
       }
-      terminal.config.screenConfigs = terminal.config.screenConfigs || {};
-      terminal.config.screenConfigs[screenId] = { ...terminal.config.screenConfigs[screenId], ...config };
-      emitSocket("updateConfig", this._selectedTerminalId, { screenConfigs: { [screenId]: config } });
-      terminal.saveConfig();
+      const terminals = game.settings.get(MODULE_ID, "terminals");
+      const termConfig = terminals[this._selectedTerminalId];
+      if (!termConfig) return;
+      termConfig.screenConfigs = termConfig.screenConfigs || {};
+      termConfig.screenConfigs[screenId] = { ...termConfig.screenConfigs[screenId], ...config };
+      game.settings.set(MODULE_ID, "terminals", terminals);
+      broadcastStateSync(this._selectedTerminalId, "updateConfig");
       ui.notifications.info(`Config saved for ${screenId}`);
     }
 
@@ -925,7 +991,6 @@ export function getGmControlsApplicationClass() {
       this.render();
     }
 
-
     _getFbConfig() {
       const terminals = game.settings.get(MODULE_ID, "terminals");
       return terminals[this._selectedTerminalId]?.screenConfigs?.fileBrowser || {};
@@ -949,9 +1014,7 @@ export function getGmControlsApplicationClass() {
 
     _saveFbFilesystem(fs) {
       this._updateFbConfig({ filesystem: fs });
-      const t = this._ensureTerminalOpen();
-      if (t?.currentScreen?.receiveFilesystemUpdate) t.currentScreen.receiveFilesystemUpdate({ filesystem: fs });
-      emitSocket("fileBrowserEdit", this._selectedTerminalId, { filesystem: fs });
+      broadcastStateSync(this._selectedTerminalId, "fileBrowserEdit");
     }
 
     _findNodeById(node, id) {
@@ -1076,7 +1139,6 @@ export function getGmControlsApplicationClass() {
       if (!node) return;
       node.hidden = !node.hidden;
       this._saveFbFilesystem(fs);
-      emitSocket("fileBrowserReveal", this._selectedTerminalId, { nodeId, hidden: node.hidden });
       this.render();
     }
 
