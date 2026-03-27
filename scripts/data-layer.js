@@ -1,4 +1,4 @@
-const MODULE_ID = "interactive-terminal";
+import { MODULE_ID } from "./constants.js";
 
 export async function hashPassword(password) {
   const data = new TextEncoder().encode(password);
@@ -167,12 +167,14 @@ export function getAllTerminalIds() {
 }
 
 export function isTerminalPublicDoc(doc) {
-  return !!doc.getFlag(MODULE_ID, "terminalId");
+  return !!doc.getFlag(MODULE_ID, "terminalId") && !!doc.getFlag(MODULE_ID, "config");
 }
 
 export function getTerminalIdFromDoc(doc) {
   return doc.getFlag(MODULE_ID, "terminalId") || null;
 }
+
+const _loginTransitionTimers = new Map();
 
 export async function handleLoginAttempt({ terminalId, passwordHash }) {
   const secrets = getSecrets(terminalId);
@@ -190,20 +192,26 @@ export async function handleLoginAttempt({ terminalId, passwordHash }) {
   await updateScreenState(terminalId, "login", login);
 
   if (correct) {
+    const prevTimer = _loginTransitionTimers.get(terminalId);
+    if (prevTimer) clearTimeout(prevTimer);
+
     const successScreen = login.successScreen || "chat";
-    setTimeout(async () => {
+    const timer = setTimeout(async () => {
+      _loginTransitionTimers.delete(terminalId);
       const freshDoc = getPublicDoc(terminalId);
       if (!freshDoc) return;
+      const freshConfig = freshDoc.getFlag(MODULE_ID, "config") || {};
+      if (freshConfig.screen !== "login") return;
       const freshState = freshDoc.getFlag(MODULE_ID, "screenState") || {};
       const freshLogin = { ...(freshState.login || {}) };
       freshLogin.lastResult = null;
-      const freshConfig = freshDoc.getFlag(MODULE_ID, "config") || {};
       freshConfig.screen = successScreen;
       await freshDoc.update({
         [`flags.${MODULE_ID}.config`]: freshConfig,
         [`flags.${MODULE_ID}.screenState.login`]: freshLogin,
       });
     }, 2500);
+    _loginTransitionTimers.set(terminalId, timer);
   }
 
   return { success: correct, attempts: login.attempts };

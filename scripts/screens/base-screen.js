@@ -59,12 +59,12 @@ export class BaseScreen {
   onInput(value) {}
 
   applyStateSync(screenConfig) {
-    foundry.utils.mergeObject(this.config, screenConfig);
+    foundry.utils.mergeObject(this.config, screenConfig, { overwrite: true, insertKeys: true, performDeletions: true });
     if (this.active && this.element) this.refresh();
   }
 
   updateConfig(newConfig) {
-    foundry.utils.mergeObject(this.config, newConfig);
+    foundry.utils.mergeObject(this.config, newConfig, { overwrite: true, insertKeys: true, performDeletions: true });
     if (this.active && this.element) this.refresh();
   }
 

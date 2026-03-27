@@ -1,5 +1,5 @@
-import { getTerminalApplicationClass } from "./terminal-app.js";
-import { getGmControlsApplicationClass } from "./gm-controls.js";
+import { TerminalApplication } from "./terminal-app.js";
+import { GmControlsApplication } from "./gm-controls.js";
 import { GlitchEffect } from "./effects/glitch.js";
 import { SoundManager } from "./effects/sounds.js";
 import {
@@ -19,7 +19,7 @@ import {
   handleFileBrowserNavigate,
   handleEmailNavigate,
 } from "./data-layer.js";
-const MODULE_ID = "interactive-terminal";
+import { MODULE_ID } from "./constants.js";
 
 const moduleState = {
   terminals: new Map(),
@@ -38,8 +38,8 @@ function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, "defaultTheme", {
-    name: game.i18n.localize("ITERM.Settings.DefaultTheme"),
-    hint: game.i18n.localize("ITERM.Settings.DefaultThemeHint"),
+    name: "ITERM.Settings.DefaultTheme",
+    hint: "ITERM.Settings.DefaultThemeHint",
     scope: "world",
     config: true,
     type: String,
@@ -53,8 +53,8 @@ function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, "enableSounds", {
-    name: game.i18n.localize("ITERM.Settings.EnableSounds"),
-    hint: game.i18n.localize("ITERM.Settings.EnableSoundsHint"),
+    name: "ITERM.Settings.EnableSounds",
+    hint: "ITERM.Settings.EnableSoundsHint",
     scope: "client",
     config: true,
     type: Boolean,
@@ -95,6 +95,8 @@ async function handleSocketMessage(data) {
         if (game.settings.get(MODULE_ID, "enableSounds")) {
           SoundManager.play(payload.sound, payload.volume);
         }
+      } else if (payload.type === "diagnosticAlert" && t) {
+        if (t.currentScreen?.triggerAlert) t.currentScreen.triggerAlert();
       }
       break;
 
@@ -180,8 +182,7 @@ function openTerminal(terminalId) {
   const config = getFullConfig(terminalId);
   if (!config) return;
 
-  const TerminalApp = getTerminalApplicationClass();
-  const terminal = new TerminalApp(terminalId, config);
+  const terminal = new TerminalApplication(terminalId, config);
   moduleState.terminals.set(terminalId, terminal);
   terminal.render(true);
 }
@@ -443,8 +444,7 @@ function openGmPanel() {
     if (moduleState.gmControls.element) moduleState.gmControls.bringToFront();
     return;
   }
-  const GmControls = getGmControlsApplicationClass();
-  moduleState.gmControls = new GmControls();
+  moduleState.gmControls = new GmControlsApplication();
   moduleState.gmControls.render(true);
 }
 

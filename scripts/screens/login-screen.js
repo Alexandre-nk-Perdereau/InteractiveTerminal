@@ -54,7 +54,7 @@ export class LoginScreen extends BaseScreen {
         if (this._remoteUpdate) return;
         emitSocket("inputSync", this.terminal.terminalId, {
           field: "login-password",
-          value: input.value.length,
+          value: input.value,
         });
       });
       setTimeout(() => input.focus(), 500);
@@ -66,7 +66,7 @@ export class LoginScreen extends BaseScreen {
       const input = this.element?.querySelector(".login-password-input");
       if (!input) return;
       this._remoteUpdate = true;
-      input.value = "*".repeat(value);
+      input.value = value;
       this._remoteUpdate = false;
     } else if (field === "login-status") {
       this._setStatus(value, "login-status term-dim");
@@ -119,7 +119,7 @@ export class LoginScreen extends BaseScreen {
     if (!input) return;
     const password = input.value;
     input.value = "";
-    emitSocket("inputSync", this.terminal.terminalId, { field: "login-password", value: 0 });
+    emitSocket("inputSync", this.terminal.terminalId, { field: "login-password", value: "" });
     if (!password) return;
 
     this._setStatus("Verifying credentials...", "login-status term-dim");

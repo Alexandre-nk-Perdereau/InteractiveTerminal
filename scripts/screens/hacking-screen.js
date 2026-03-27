@@ -160,7 +160,8 @@ export class HackingScreen extends BaseScreen {
   }
 
   _generateGrid() {
-    const rng = HackingScreen._seededRandom(this.gridSeed);
+    this._rng = HackingScreen._seededRandom(this.gridSeed);
+    const rng = this._rng;
     const totalChars = 32 * 16;
     const fillers = HackingScreen.FILLER_CHARS;
     const grid = Array.from({ length: totalChars }, () => ({
@@ -169,7 +170,11 @@ export class HackingScreen extends BaseScreen {
     }));
 
     const placed = new Set();
-    const shuffled = [...this.words].sort(() => rng() - 0.5);
+    const shuffled = [...this.words];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
 
     for (let w = 0; w < shuffled.length; w++) {
       const word = shuffled[w];
@@ -203,7 +208,7 @@ export class HackingScreen extends BaseScreen {
     if (!container) return;
     container.innerHTML = "";
 
-    let baseAddr = 0xf000 + Math.floor(Math.random() * 0x0fff);
+    let baseAddr = 0xf000 + Math.floor(this._rng() * 0x0fff);
     for (let row = 0; row < 32; row++) {
       const rowDiv = document.createElement("div");
       rowDiv.classList.add("hack-row");

@@ -1,3 +1,5 @@
+import { MODULE_ID } from "../constants.js";
+
 export class SoundManager {
   static SOUNDS = {
     keystroke: { label: "Keystroke", src: null },
@@ -22,7 +24,7 @@ export class SoundManager {
   }
 
   static async play(soundId, volume = 0.5) {
-    const enabled = game.settings.get("interactive-terminal", "enableSounds");
+    const enabled = game.settings.get(MODULE_ID, "enableSounds");
     if (!enabled) return;
 
     const def = SoundManager.SOUNDS[soundId];

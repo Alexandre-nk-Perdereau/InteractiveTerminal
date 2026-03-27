@@ -209,7 +209,7 @@ export class CommandScreen extends BaseScreen {
       if (entry.type === "command") {
         const line = document.createElement("div");
         line.classList.add("terminal-line", "command-input-line");
-        line.innerHTML = `<span class="command-prompt">${this.config.prompt || ">"} </span><span class="command-text">${this._escapeHtml(entry.text)}</span>`;
+        line.innerHTML = `<span class="command-prompt">${this._escapeHtml(this.config.prompt || ">")} </span><span class="command-text">${this._escapeHtml(entry.text)}</span>`;
         output.appendChild(line);
       } else {
         const lines = entry.text.split("\n");

@@ -24,6 +24,7 @@ export class CountdownScreen extends BaseScreen {
     this.expireScreen = config.expireScreen || "crash";
     this._interval = null;
     this._lastBeep = 0;
+    this._targetTime = config.targetTime || null;
   }
 
   getData() {
@@ -59,7 +60,8 @@ export class CountdownScreen extends BaseScreen {
       return;
     }
     if (screenConfig.targetTime && screenConfig.running) {
-      this.remaining = Math.max(0, Math.ceil((screenConfig.targetTime - Date.now()) / 1000));
+      this._targetTime = screenConfig.targetTime;
+      this.remaining = Math.max(0, Math.ceil((this._targetTime - Date.now()) / 1000));
       if (!this.running) {
         this.running = true;
         this.expired = false;
@@ -78,6 +80,7 @@ export class CountdownScreen extends BaseScreen {
   start() {
     if (this.running || this.expired) return;
     this.running = true;
+    this._targetTime = Date.now() + this.remaining * 1000;
     SoundManager.play("boot");
     this._interval = setInterval(() => this._tick(), 1000);
     this._updateDisplay();
@@ -85,6 +88,7 @@ export class CountdownScreen extends BaseScreen {
 
   stop() {
     this.running = false;
+    this._targetTime = null;
     this._stopInterval();
     this._updateDisplay();
   }
@@ -93,6 +97,7 @@ export class CountdownScreen extends BaseScreen {
     this._stopInterval();
     this.running = false;
     this.expired = false;
+    this._targetTime = null;
     if (duration !== undefined) this.duration = duration;
     this.remaining = this.duration;
     this._updateDisplay();
@@ -106,6 +111,9 @@ export class CountdownScreen extends BaseScreen {
 
   addTime(seconds) {
     this.remaining = Math.max(0, this.remaining + seconds);
+    if (this._targetTime && this.running) {
+      this._targetTime += seconds * 1000;
+    }
     if (seconds > 0) {
       SoundManager.play("success");
     }
@@ -121,7 +129,11 @@ export class CountdownScreen extends BaseScreen {
 
   _tick() {
     if (!this.running || !this.active) return;
-    this.remaining = Math.max(0, this.remaining - 1);
+    if (this._targetTime) {
+      this.remaining = Math.max(0, Math.ceil((this._targetTime - Date.now()) / 1000));
+    } else {
+      this.remaining = Math.max(0, this.remaining - 1);
+    }
 
     if (this.remaining <= 10 && this.remaining > 0) {
       SoundManager.play("beep");
