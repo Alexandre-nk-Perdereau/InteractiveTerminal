@@ -53,7 +53,7 @@ export class CommandScreen extends BaseScreen {
 
   activateListeners() {}
 
-  async applyStateSync(screenConfig, syncMeta) {
+  async applyStateSync(screenConfig) {
     if (!screenConfig.history) return;
     const prevCount = this.history.length;
     const newEntries = screenConfig.history.slice(prevCount);

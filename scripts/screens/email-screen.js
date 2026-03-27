@@ -102,7 +102,7 @@ export class EmailScreen extends BaseScreen {
     return summaries;
   }
 
-  applyStateSync(screenConfig, syncMeta) {
+  applyStateSync(screenConfig) {
     const prevCount = this.emails.length;
     if (screenConfig.emails) this.emails = screenConfig.emails.map((e) => ({ ...e }));
     if (screenConfig.openThreadId !== undefined) this.openThreadId = screenConfig.openThreadId;

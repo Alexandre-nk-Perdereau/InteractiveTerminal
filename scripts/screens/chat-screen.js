@@ -53,7 +53,7 @@ export class ChatScreen extends BaseScreen {
     }
   }
 
-  async applyStateSync(screenConfig, syncMeta) {
+  async applyStateSync(screenConfig) {
     if (!screenConfig.messages) return;
     const prevCount = this.messages.length;
     const newMessages = screenConfig.messages.slice(prevCount);

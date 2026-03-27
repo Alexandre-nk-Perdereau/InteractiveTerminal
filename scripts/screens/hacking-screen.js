@@ -54,12 +54,11 @@ export class HackingScreen extends BaseScreen {
       "WARDENS",
       "XCHANGE",
     ];
-    this.correctWord = config.correctWord || this.words[0];
     this.maxAttempts = config.attempts || 4;
-    this.attemptsLeft = this.maxAttempts;
-    this.solved = false;
-    this.locked = false;
-    this.guesses = [];
+    this.attemptsLeft = config.attemptsLeft ?? this.maxAttempts;
+    this.solved = config.solved || false;
+    this.locked = config.locked || false;
+    this.guesses = (config.guesses || []).map((g) => (typeof g === "string" ? { word: g, likeness: 0 } : g));
     this._gridData = null;
   }
 
@@ -95,9 +94,12 @@ export class HackingScreen extends BaseScreen {
     });
   }
 
-  applyStateSync(screenConfig, syncMeta) {
-    const prevGuesses = [...this.guesses];
-    if (screenConfig.guesses) this.guesses = [...screenConfig.guesses];
+  applyStateSync(screenConfig) {
+    const prevGuessWords = this.guesses.map((g) => g.word);
+
+    if (screenConfig.guesses) {
+      this.guesses = screenConfig.guesses.map((g) => (typeof g === "string" ? { word: g, likeness: 0 } : g));
+    }
     if (screenConfig.attemptsLeft !== undefined) this.attemptsLeft = screenConfig.attemptsLeft;
     if (screenConfig.solved !== undefined) this.solved = screenConfig.solved;
     if (screenConfig.locked !== undefined) this.locked = screenConfig.locked;
@@ -112,16 +114,16 @@ export class HackingScreen extends BaseScreen {
 
     if (!this.active || !this.element) return;
 
-    const newGuesses = this.guesses.filter((w) => !prevGuesses.includes(w));
+    const newGuesses = this.guesses.filter((g) => !prevGuessWords.includes(g.word));
     const output = this.element.querySelector(".hack-output");
 
-    for (const word of newGuesses) {
-      const els = this.element.querySelectorAll(`.hack-word[data-word="${word}"]`);
-      if (word === this.correctWord) {
+    for (const guess of newGuesses) {
+      const els = this.element.querySelectorAll(`.hack-word[data-word="${guess.word}"]`);
+      if (this.solved && guess === this.guesses[this.guesses.length - 1]) {
         els.forEach((el) => el.classList.add("hack-word-correct"));
         SoundManager.play("granted");
         if (output) {
-          this._addLine(output, `> ${word}`);
+          this._addLine(output, `> ${guess.word}`);
           this._addLine(output, "> Exact match!", "term-success");
           this._addLine(output, "> Entry granted.", "term-success term-glow");
         }
@@ -135,12 +137,11 @@ export class HackingScreen extends BaseScreen {
         }
       } else {
         els.forEach((el) => el.classList.add("hack-word-used"));
-        const likeness = this._likeness(word, this.correctWord);
         SoundManager.play("denied");
         GlitchEffect.trigger(this.terminal.element, "short");
         if (output) {
-          this._addLine(output, `> ${word}`);
-          this._addLine(output, `> Entry denied. Likeness=${likeness}`, "term-error");
+          this._addLine(output, `> ${guess.word}`);
+          this._addLine(output, `> Entry denied. Likeness=${guess.likeness}`, "term-error");
         }
       }
     }
@@ -230,75 +231,13 @@ export class HackingScreen extends BaseScreen {
     }
   }
 
-  _attemptWord(word) {
-    if (this.guesses.includes(word)) return;
-    this._applyAttempt(word);
-    emitRequestAction(this.terminal.terminalId, "hackingAttempt", { word });
-  }
+  async _attemptWord(word) {
+    if (this.guesses.find((g) => g.word === word)) return;
 
-  _applyAttempt(word) {
-    this.guesses.push(word);
-    this.attemptsLeft--;
-
+    // Optimistic local feedback
     SoundManager.play("keystroke");
-    const output = this.element?.querySelector(".hack-output");
-    const attemptsEl = this.element?.querySelector(".hack-attempts-left");
 
-    if (word === this.correctWord) {
-      this.solved = true;
-      SoundManager.play("granted");
-      if (output) {
-        this._addLine(output, `> ${word}`);
-        this._addLine(output, "> Exact match!", "term-success");
-        this._addLine(output, "> Entry granted.", "term-success term-glow");
-      }
-      this.element
-        ?.querySelectorAll(`.hack-word[data-word="${word}"]`)
-        .forEach((el) => el.classList.add("hack-word-correct"));
-
-      const crt = this.terminal.element?.querySelector(".terminal-crt");
-      if (crt) {
-        const flash = document.createElement("div");
-        flash.classList.add("access-granted-flash");
-        flash.textContent = "ACCESS GRANTED";
-        crt.appendChild(flash);
-        setTimeout(() => flash.remove(), 2000);
-      }
-    } else {
-      const likeness = this._likeness(word, this.correctWord);
-      if (output) {
-        this._addLine(output, `> ${word}`);
-        this._addLine(output, `> Entry denied. Likeness=${likeness}`, "term-error");
-      }
-      this.element
-        ?.querySelectorAll(`.hack-word[data-word="${word}"]`)
-        .forEach((el) => el.classList.add("hack-word-used"));
-      GlitchEffect.trigger(this.terminal.element, "short");
-      SoundManager.play("denied");
-      if (attemptsEl) attemptsEl.textContent = `${this.attemptsLeft}/${this.maxAttempts}`;
-      if (this.attemptsLeft <= 0) this._lockout();
-    }
-  }
-
-  _likeness(a, b) {
-    let n = 0;
-    for (let i = 0; i < Math.min(a.length, b.length); i++) {
-      if (a[i] === b[i]) n++;
-    }
-    return n;
-  }
-
-  _lockout() {
-    this.locked = true;
-    const output = this.element?.querySelector(".hack-output");
-    if (output) {
-      this._addLine(output, "");
-      this._addLine(output, "> TERMINAL LOCKED", "term-error term-glow");
-      this._addLine(output, "> Please contact an administrator.", "term-error");
-    }
-    GlitchEffect.trigger(this.terminal.element, "sustained");
-    SoundManager.play("error");
-    this.element?.querySelectorAll(".hack-word").forEach((el) => el.classList.add("hack-word-used"));
+    emitRequestAction(this.terminal.terminalId, "hackingAttempt", { word });
   }
 
   _addLine(container, text, cssClass = "") {

@@ -3,7 +3,6 @@ import {
   moduleState,
   emitSocket,
   emitEphemeralEffect,
-  broadcastStateSync,
   createNewTerminal,
   deployTerminal,
   undeployTerminal,
@@ -11,6 +10,20 @@ import {
   getPendingCommands,
   sendGmResponse,
 } from "./module.js";
+import {
+  getFullConfig,
+  getTerminalConfig,
+  getScreenState,
+  getSecrets,
+  getAllTerminalIds,
+  updateTerminalConfig,
+  updateScreenState,
+  updateSecrets,
+  updateCustomSequences,
+  deleteTerminalDocuments,
+  getCustomSequences,
+  hashPassword,
+} from "./data-layer.js";
 import { getTerminalApplicationClass } from "./terminal-app.js";
 import { GlitchEffect } from "./effects/glitch.js";
 import { SoundManager } from "./effects/sounds.js";
@@ -100,17 +113,12 @@ export function getGmControlsApplicationClass() {
         minimizable: true,
         resizable: true,
       },
-      position: {
-        width: 420,
-        height: 700,
-      },
+      position: { width: 420, height: 700 },
       actions: {},
     };
 
     static PARTS = {
-      controls: {
-        template: `modules/${MODULE_ID}/templates/gm-controls.hbs`,
-      },
+      controls: { template: `modules/${MODULE_ID}/templates/gm-controls.hbs` },
     };
 
     constructor() {
@@ -126,9 +134,9 @@ export function getGmControlsApplicationClass() {
       if (!this._selectedTerminalId) return null;
       let terminal = this.selectedTerminal;
       if (!terminal) {
-        const config = game.settings.get(MODULE_ID, "terminals")[this._selectedTerminalId];
+        const config = getFullConfig(this._selectedTerminalId);
         if (config) {
-          InteractiveTerminal.openTerminal(this._selectedTerminalId, config);
+          InteractiveTerminal.openTerminal(this._selectedTerminalId);
           terminal = moduleState.terminals.get(this._selectedTerminalId);
         }
       }
@@ -136,16 +144,20 @@ export function getGmControlsApplicationClass() {
     }
 
     async _prepareContext() {
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const terminalList = Object.entries(terminals).map(([id, config]) => ({
-        id,
-        title: config.title || "Terminal",
-        screen: config.screen,
-        isOpen: moduleState.terminals.has(id),
-        deployed: config.deployed || false,
-      }));
+      const terminalIds = getAllTerminalIds();
+      const terminalList = terminalIds.map((id) => {
+        const config = getTerminalConfig(id);
+        return {
+          id,
+          title: config?.title || "Terminal",
+          screen: config?.screen,
+          isOpen: moduleState.terminals.has(id),
+          deployed: config?.deployed || false,
+        };
+      });
 
-      const selected = this._selectedTerminalId ? terminals[this._selectedTerminalId] : null;
+      const selected = this._selectedTerminalId ? getFullConfig(this._selectedTerminalId) : null;
+      const secrets = this._selectedTerminalId ? getSecrets(this._selectedTerminalId) : null;
       const players = game.users
         .filter((u) => !u.isGM)
         .map((u) => ({
@@ -165,6 +177,8 @@ export function getGmControlsApplicationClass() {
           id,
           label: cls.screenName || id,
         })),
+        loginPassword: secrets?.loginPassword ?? "password",
+        hackingCorrectWord: secrets?.hackingCorrectWord ?? "DECRYPT",
         loginSuccessScreen: selected?.screenConfigs?.login?.successScreen ?? "chat",
         themes: [
           { id: "green", label: "Green" },
@@ -225,8 +239,8 @@ export function getGmControlsApplicationClass() {
       if (!this._selectedTerminalId) return null;
       const terminal = moduleState.terminals.get(this._selectedTerminalId);
       if (terminal) return terminal.config.screen || null;
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      return terminals[this._selectedTerminalId]?.screen || null;
+      const config = getTerminalConfig(this._selectedTerminalId);
+      return config?.screen || null;
     }
 
     _onRender() {
@@ -237,46 +251,43 @@ export function getGmControlsApplicationClass() {
         this.render();
       });
 
-      this._on(el, "createTerminal", () => {
-        const id = createNewTerminal();
+      this._on(el, "createTerminal", async () => {
+        const id = await createNewTerminal();
         this._selectedTerminalId = id;
         this.render();
       });
 
-      this._on(el, "saveTitle", () => {
+      this._on(el, "saveTitle", async () => {
         const title = el.querySelector(".gm-terminal-title")?.value?.trim();
         if (!title || !this._selectedTerminalId) return;
-        this._updateTerminalConfig({ title });
-        broadcastStateSync(this._selectedTerminalId, "updateConfig");
+        await updateTerminalConfig(this._selectedTerminalId, { title });
         ui.notifications.info("Title updated");
       });
 
       this._on(el, "previewTerminal", () => {
         if (!this._selectedTerminalId) return;
-        const config = game.settings.get(MODULE_ID, "terminals")[this._selectedTerminalId];
-        if (config) InteractiveTerminal.openTerminal(this._selectedTerminalId, config);
+        InteractiveTerminal.openTerminal(this._selectedTerminalId);
       });
 
-      this._on(el, "deployTerminal", () => {
+      this._on(el, "deployTerminal", async () => {
         if (!this._selectedTerminalId) return;
-        deployTerminal(this._selectedTerminalId);
+        await deployTerminal(this._selectedTerminalId);
         this.render();
         ui.notifications.info("Terminal deployed to players");
       });
 
-      this._on(el, "undeployTerminal", () => {
+      this._on(el, "undeployTerminal", async () => {
         if (!this._selectedTerminalId) return;
-        undeployTerminal(this._selectedTerminalId);
+        await undeployTerminal(this._selectedTerminalId);
         this.render();
         ui.notifications.info("Terminal hidden from players");
       });
 
-      this._on(el, "toggleLock", () => {
+      this._on(el, "toggleLock", async () => {
         const terminal = this.selectedTerminal;
         if (!terminal) return;
         const newLocked = !terminal.config.locked;
-        this._updateTerminalConfig({ locked: newLocked });
-        broadcastStateSync(this._selectedTerminalId, "lockTerminal");
+        await updateTerminalConfig(this._selectedTerminalId, { locked: newLocked });
         this.render();
       });
 
@@ -293,9 +304,7 @@ export function getGmControlsApplicationClass() {
           moduleState.terminals.delete(this._selectedTerminalId);
         }
         emitSocket("closeTerminal", this._selectedTerminalId);
-        const terminals = game.settings.get(MODULE_ID, "terminals");
-        delete terminals[this._selectedTerminalId];
-        await game.settings.set(MODULE_ID, "terminals", terminals);
+        await deleteTerminalDocuments(this._selectedTerminalId);
         this._selectedTerminalId = null;
         this.render();
       });
@@ -304,57 +313,57 @@ export function getGmControlsApplicationClass() {
         btn.addEventListener("click", async (e) => {
           if (!this.selectedTerminal) return;
           const screen = e.currentTarget.dataset.screen;
-          this._updateTerminalConfig({ screen });
-          broadcastStateSync(this._selectedTerminalId, "switchScreen", { screen });
+          await updateTerminalConfig(this._selectedTerminalId, { screen });
           this.render();
         });
       });
 
-      this._on(el, "resetScreen", () => {
+      this._on(el, "resetScreen", async () => {
         const terminal = this.selectedTerminal;
         if (!terminal) return;
         terminal.resetScreen();
-        terminal.saveConfig();
-        broadcastStateSync(this._selectedTerminalId, "resetScreen");
+        const screenId = terminal.config.screen || "login";
+        const sc = terminal.config.screenConfigs?.[screenId];
+        if (sc) await updateScreenState(this._selectedTerminalId, screenId, sc);
         ui.notifications.info("Screen reset");
       });
 
       el.querySelectorAll("[data-action='changeTheme']").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
+        btn.addEventListener("click", async (e) => {
           if (!this.selectedTerminal) return;
           const theme = e.currentTarget.dataset.theme;
-          this._updateTerminalConfig({ theme });
-          broadcastStateSync(this._selectedTerminalId, "updateConfig", { theme });
+          await updateTerminalConfig(this._selectedTerminalId, { theme });
         });
       });
 
-      this._on(el, "updatePermissions", () => {
+      this._on(el, "updatePermissions", async () => {
         if (!this.selectedTerminal) return;
         const permissions = {};
         el.querySelectorAll(".gm-player-permission").forEach((cb) => {
           permissions[cb.dataset.userId] = cb.checked;
         });
-        this._updateTerminalConfig({ permissions });
-        broadcastStateSync(this._selectedTerminalId, "updatePermissions");
+        await updateTerminalConfig(this._selectedTerminalId, { permissions });
       });
 
-      this._on(el, "sendSystemMessage", () => {
+      this._on(el, "sendSystemMessage", async () => {
         if (!this._selectedTerminalId) return;
         const text = el.querySelector(".gm-system-message")?.value?.trim();
         const cssClass = el.querySelector(".gm-system-message-style")?.value || "term-warning";
         if (!text) return;
-        const terminals = game.settings.get(MODULE_ID, "terminals");
-        const config = terminals[this._selectedTerminalId];
-        if (!config) return;
-        const screenId = config.screen || "login";
-        const sc = config.screenConfigs?.[screenId];
-        if (sc?.messages) {
-          sc.messages.push({ sender: "SYSTEM", text, timestamp: Date.now(), isSystem: true, cssClass });
-        } else if (sc?.history) {
-          sc.history.push({ type: "response", text: `[${cssClass.includes("error") ? "ERROR" : "SYSTEM"}] ${text}` });
+        const screenState = getScreenState(this._selectedTerminalId);
+        if (!screenState) return;
+        const config = getTerminalConfig(this._selectedTerminalId);
+        const screenId = config?.screen || "login";
+        const sc = { ...(screenState[screenId] || {}) };
+        if (sc.messages) {
+          sc.messages = [...sc.messages, { sender: "SYSTEM", text, timestamp: Date.now(), isSystem: true, cssClass }];
+        } else if (sc.history) {
+          sc.history = [
+            ...sc.history,
+            { type: "response", text: `[${cssClass.includes("error") ? "ERROR" : "SYSTEM"}] ${text}` },
+          ];
         }
-        game.settings.set(MODULE_ID, "terminals", terminals);
-        broadcastStateSync(this._selectedTerminalId, "systemMessage");
+        await updateScreenState(this._selectedTerminalId, screenId, sc);
         el.querySelector(".gm-system-message").value = "";
       });
 
@@ -449,101 +458,92 @@ export function getGmControlsApplicationClass() {
       });
 
       ["start", "pause", "resume", "interrupt", "reset"].forEach((cmd) => {
-        this._on(el, `download-${cmd}`, () => {
+        this._on(el, `download-${cmd}`, async () => {
           const t = this._ensureTerminalOpen();
           if (t?.currentScreen) t.currentScreen[cmd]?.();
-          const dl = this._getScreenConfig("download");
-          if (dl) {
-            const s = t?.currentScreen;
-            if (s) {
-              dl.progress = s.progress;
-              dl.running = s.running;
-              dl.completed = s.completed;
-              dl.interrupted = s.interrupted;
-              dl.log = s.log || [];
-            }
-            this._setScreenConfig("download", dl);
-            broadcastStateSync(this._selectedTerminalId, `download-${cmd}`);
+          const s = t?.currentScreen;
+          if (s) {
+            await updateScreenState(this._selectedTerminalId, "download", {
+              progress: s.progress,
+              running: s.running,
+              completed: s.completed,
+              interrupted: s.interrupted,
+              log: s.log || [],
+              filename: s.filename,
+              totalSize: s.totalSize,
+              speed: s.speed,
+            });
           }
         });
       });
 
-      this._on(el, "download-setProgress", () => {
+      this._on(el, "download-setProgress", async () => {
         const val = parseFloat(el.querySelector(".gm-download-progress")?.value) || 0;
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.setProgress?.(val);
-        const dl = this._getScreenConfig("download");
-        if (dl) {
-          dl.progress = val;
-          if (val >= 100) dl.completed = true;
-          this._setScreenConfig("download", dl);
-          broadcastStateSync(this._selectedTerminalId, "download-setProgress");
-        }
+        const screenState = getScreenState(this._selectedTerminalId);
+        const dl = { ...(screenState?.download || {}) };
+        dl.progress = val;
+        if (val >= 100) dl.completed = true;
+        await updateScreenState(this._selectedTerminalId, "download", dl);
       });
 
-      this._on(el, "countdown-start", () => {
+      this._on(el, "countdown-start", async () => {
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.start?.();
-        const cd = this._getScreenConfig("countdown");
-        if (cd) {
-          const remaining = t?.currentScreen?.remaining ?? cd.remaining ?? cd.duration ?? 300;
-          cd.running = true;
-          cd.expired = false;
-          cd.targetTime = Date.now() + remaining * 1000;
-          cd.remaining = remaining;
-          this._setScreenConfig("countdown", cd);
-          broadcastStateSync(this._selectedTerminalId, "countdown-start");
-        }
+        const screenState = getScreenState(this._selectedTerminalId);
+        const cd = { ...(screenState?.countdown || {}) };
+        const remaining = t?.currentScreen?.remaining ?? cd.remaining ?? cd.duration ?? 300;
+        cd.running = true;
+        cd.expired = false;
+        cd.targetTime = Date.now() + remaining * 1000;
+        cd.remaining = remaining;
+        await updateScreenState(this._selectedTerminalId, "countdown", cd);
       });
 
-      this._on(el, "countdown-stop", () => {
+      this._on(el, "countdown-stop", async () => {
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.stop?.();
-        const cd = this._getScreenConfig("countdown");
-        if (cd) {
-          cd.running = false;
-          cd.remaining = t?.currentScreen?.remaining ?? cd.remaining;
-          cd.targetTime = null;
-          this._setScreenConfig("countdown", cd);
-          broadcastStateSync(this._selectedTerminalId, "countdown-stop");
-        }
+        const screenState = getScreenState(this._selectedTerminalId);
+        const cd = { ...(screenState?.countdown || {}) };
+        cd.running = false;
+        cd.remaining = t?.currentScreen?.remaining ?? cd.remaining;
+        cd.targetTime = null;
+        await updateScreenState(this._selectedTerminalId, "countdown", cd);
       });
 
-      this._on(el, "countdown-reset", () => {
+      this._on(el, "countdown-reset", async () => {
         const dur = parseInt(el.querySelector(".gm-countdown-duration")?.value) || 300;
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.reset?.(dur);
-        const cd = this._getScreenConfig("countdown");
-        if (cd) {
-          cd.running = false;
-          cd.expired = false;
-          cd.duration = dur;
-          cd.remaining = dur;
-          cd.targetTime = null;
-          this._setScreenConfig("countdown", cd);
-          broadcastStateSync(this._selectedTerminalId, "countdown-reset");
-        }
+        await updateScreenState(this._selectedTerminalId, "countdown", {
+          ...(getScreenState(this._selectedTerminalId)?.countdown || {}),
+          running: false,
+          expired: false,
+          duration: dur,
+          remaining: dur,
+          targetTime: null,
+        });
       });
 
-      this._on(el, "countdown-addTime", () => {
+      this._on(el, "countdown-addTime", async () => {
         const sec = parseInt(el.querySelector(".gm-countdown-add")?.value) || 30;
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.addTime?.(sec);
-        this._adjustCountdownTime(sec, t);
+        await this._adjustCountdownTime(sec, t);
       });
 
-      this._on(el, "countdown-subTime", () => {
+      this._on(el, "countdown-subTime", async () => {
         const sec = parseInt(el.querySelector(".gm-countdown-add")?.value) || 30;
         const t = this._ensureTerminalOpen();
         if (t?.currentScreen) t.currentScreen.addTime?.(-sec);
-        this._adjustCountdownTime(-sec, t);
+        await this._adjustCountdownTime(-sec, t);
       });
 
       el.querySelectorAll("[data-action='setCrashPreset']").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
+        btn.addEventListener("click", async (e) => {
           const preset = e.currentTarget.dataset.preset;
-          this._updateTerminalConfig({ screenConfigs: { crash: { preset } } });
-          broadcastStateSync(this._selectedTerminalId, "crashPreset", { preset });
+          await updateScreenState(this._selectedTerminalId, "crash", { preset });
         });
       });
 
@@ -579,42 +579,30 @@ export function getGmControlsApplicationClass() {
         }
       }
 
-      this._on(el, "diagnostic-setValue", () => {
+      this._on(el, "diagnostic-setValue", async () => {
         const gaugeId = el.querySelector(".gm-diagnostic-gauge-select")?.value;
         const value = parseFloat(el.querySelector(".gm-diagnostic-value")?.value) || 0;
         if (!gaugeId) return;
-        this._updateDiagnosticGauge(gaugeId, value);
-        broadcastStateSync(this._selectedTerminalId, "diagnostic-setValue");
+        await this._updateDiagnosticGauge(gaugeId, value);
       });
 
       this._on(el, "diagnostic-addGauge", async () => {
         const label = await this._fbPrompt("Gauge label:");
         if (!label) return;
         const gauge = { id: foundry.utils.randomID(8), label: label.toUpperCase(), value: 100, status: "normal" };
-        const terminals = game.settings.get(MODULE_ID, "terminals");
-        const config = terminals[this._selectedTerminalId];
-        if (config) {
-          config.screenConfigs = config.screenConfigs || {};
-          config.screenConfigs.diagnostic = config.screenConfigs.diagnostic || { gauges: [] };
-          config.screenConfigs.diagnostic.gauges.push(gauge);
-          game.settings.set(MODULE_ID, "terminals", terminals);
-        }
-        broadcastStateSync(this._selectedTerminalId, "diagnostic-addGauge");
+        const screenState = getScreenState(this._selectedTerminalId);
+        const diag = { ...(screenState?.diagnostic || {}), gauges: [...(screenState?.diagnostic?.gauges || [])] };
+        diag.gauges.push(gauge);
+        await updateScreenState(this._selectedTerminalId, "diagnostic", diag);
         this.render();
       });
 
-      this._on(el, "diagnostic-removeGauge", () => {
+      this._on(el, "diagnostic-removeGauge", async () => {
         const gaugeId = el.querySelector(".gm-diagnostic-gauge-select")?.value;
         if (!gaugeId) return;
-        const terminals = game.settings.get(MODULE_ID, "terminals");
-        const config = terminals[this._selectedTerminalId];
-        if (config?.screenConfigs?.diagnostic?.gauges) {
-          config.screenConfigs.diagnostic.gauges = config.screenConfigs.diagnostic.gauges.filter(
-            (g) => g.id !== gaugeId,
-          );
-          game.settings.set(MODULE_ID, "terminals", terminals);
-        }
-        broadcastStateSync(this._selectedTerminalId, "diagnostic-removeGauge");
+        const screenState = getScreenState(this._selectedTerminalId);
+        const gauges = (screenState?.diagnostic?.gauges || []).filter((g) => g.id !== gaugeId);
+        await updateScreenState(this._selectedTerminalId, "diagnostic", { ...(screenState?.diagnostic || {}), gauges });
         this.render();
       });
 
@@ -672,8 +660,7 @@ export function getGmControlsApplicationClass() {
             })
             .filter((a) => a.name);
         }
-        this._persistEmail(email);
-        broadcastStateSync(this._selectedTerminalId, "email-receive");
+        await this._persistEmail(email);
         el.querySelector(".gm-email-subject").value = "";
         el.querySelector(".gm-email-body").value = "";
         if (el.querySelector(".gm-email-attachments")) el.querySelector(".gm-email-attachments").value = "";
@@ -688,25 +675,20 @@ export function getGmControlsApplicationClass() {
           content: "<p>Delete all emails from this terminal?</p>",
         });
         if (!confirmed) return;
-        const terminals = game.settings.get(MODULE_ID, "terminals");
-        const config = terminals[this._selectedTerminalId];
-        if (config?.screenConfigs?.email) {
-          config.screenConfigs.email.emails = [];
-          game.settings.set(MODULE_ID, "terminals", terminals);
-        }
-        broadcastStateSync(this._selectedTerminalId, "email-clear");
+        const screenState = getScreenState(this._selectedTerminalId);
+        const email = { ...(screenState?.email || {}), emails: [] };
+        await updateScreenState(this._selectedTerminalId, "email", email);
       });
 
-      this._on(el, "fb-lockNav", () => {
-        const locked = !this._getFbConfig().navigationLocked;
-        this._updateFbConfig({ navigationLocked: locked });
-        broadcastStateSync(this._selectedTerminalId, "fb-lockNav");
+      this._on(el, "fb-lockNav", async () => {
+        const fbConfig = this._getFbConfig();
+        const locked = !fbConfig.navigationLocked;
+        await this._updateFbConfig({ navigationLocked: locked });
         this.render();
       });
 
-      this._on(el, "fb-forceHome", () => {
-        this._updateFbConfig({ currentPath: [], openFile: null });
-        broadcastStateSync(this._selectedTerminalId, "fb-forceHome");
+      this._on(el, "fb-forceHome", async () => {
+        await this._updateFbConfig({ currentPath: [], openFile: null });
       });
 
       this._on(el, "fb-addFolder", () => this._fbAddNode("folder"));
@@ -735,66 +717,45 @@ export function getGmControlsApplicationClass() {
       return [...threadMap.values()];
     }
 
-    _persistEmail(email) {
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const config = terminals[this._selectedTerminalId];
-      if (!config) return;
-      config.screenConfigs = config.screenConfigs || {};
-      config.screenConfigs.email = config.screenConfigs.email || { emails: [] };
-      config.screenConfigs.email.emails.unshift(email);
-      game.settings.set(MODULE_ID, "terminals", terminals);
+    async _persistEmail(email) {
+      const screenState = getScreenState(this._selectedTerminalId);
+      const emailConfig = { ...(screenState?.email || {}), emails: [...(screenState?.email?.emails || [])] };
+      emailConfig.emails.unshift(email);
+      await updateScreenState(this._selectedTerminalId, "email", emailConfig);
     }
 
     _getDiagnosticGauges() {
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      return terminals[this._selectedTerminalId]?.screenConfigs?.diagnostic?.gauges ?? [];
+      const screenState = getScreenState(this._selectedTerminalId);
+      return screenState?.diagnostic?.gauges ?? [];
     }
 
-    _updateDiagnosticGauge(gaugeId, value) {
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const gauges = terminals[this._selectedTerminalId]?.screenConfigs?.diagnostic?.gauges;
-      if (!gauges) return;
+    async _updateDiagnosticGauge(gaugeId, value) {
+      const screenState = getScreenState(this._selectedTerminalId);
+      const gauges = [...(screenState?.diagnostic?.gauges || [])];
       const gauge = gauges.find((g) => g.id === gaugeId);
       if (gauge) {
         gauge.value = Math.max(0, Math.min(100, value));
         gauge.status = value <= 0 ? "failure" : value <= 20 ? "critical" : value <= 50 ? "warning" : "normal";
-        game.settings.set(MODULE_ID, "terminals", terminals);
+        await updateScreenState(this._selectedTerminalId, "diagnostic", { ...(screenState?.diagnostic || {}), gauges });
       }
     }
 
     _getScreenConfig(screenId) {
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      return terminals[this._selectedTerminalId]?.screenConfigs?.[screenId] || null;
+      const screenState = getScreenState(this._selectedTerminalId);
+      return screenState?.[screenId] || null;
     }
 
-    _setScreenConfig(screenId, config) {
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const termConfig = terminals[this._selectedTerminalId];
-      if (!termConfig) return;
-      termConfig.screenConfigs = termConfig.screenConfigs || {};
-      termConfig.screenConfigs[screenId] = config;
-      game.settings.set(MODULE_ID, "terminals", terminals);
-    }
-
-    _adjustCountdownTime(seconds, terminal) {
-      const cd = this._getScreenConfig("countdown");
-      if (!cd) return;
+    async _adjustCountdownTime(seconds, terminal) {
+      const screenState = getScreenState(this._selectedTerminalId);
+      const cd = { ...(screenState?.countdown || {}) };
       cd.remaining = Math.max(0, (terminal?.currentScreen?.remaining ?? cd.remaining ?? 0) + seconds);
       if (cd.running && cd.remaining > 0) {
         cd.targetTime = Date.now() + cd.remaining * 1000;
       }
-      this._setScreenConfig("countdown", cd);
-      broadcastStateSync(this._selectedTerminalId, "countdown-addTime");
+      await updateScreenState(this._selectedTerminalId, "countdown", cd);
     }
 
-    _updateTerminalConfig(partial) {
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      if (!terminals[this._selectedTerminalId]) return;
-      Object.assign(terminals[this._selectedTerminalId], partial);
-      game.settings.set(MODULE_ID, "terminals", terminals);
-    }
-
-    _sendNpcMessage() {
+    async _sendNpcMessage() {
       if (!this._selectedTerminalId) return;
       const textarea = this.element.querySelector(".gm-npc-message");
       const nameInput = this.element.querySelector(".gm-npc-name");
@@ -803,19 +764,14 @@ export function getGmControlsApplicationClass() {
       if (!text) return;
 
       const msg = { sender: npcName, text, timestamp: Date.now(), isNpc: true };
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const config = terminals[this._selectedTerminalId];
-      if (config) {
-        config.screenConfigs = config.screenConfigs || {};
-        config.screenConfigs.chat = config.screenConfigs.chat || { messages: [] };
-        config.screenConfigs.chat.messages.push(msg);
-        game.settings.set(MODULE_ID, "terminals", terminals);
-      }
-      broadcastStateSync(this._selectedTerminalId, "chatMessage");
+      const screenState = getScreenState(this._selectedTerminalId);
+      const chat = { ...(screenState?.chat || {}), messages: [...(screenState?.chat?.messages || [])] };
+      chat.messages.push(msg);
+      await updateScreenState(this._selectedTerminalId, "chat", chat);
       textarea.value = "";
     }
 
-    _saveScreenConfig(form) {
+    async _saveScreenConfig(form) {
       if (!this._selectedTerminalId) return;
       const formData = new FormData(form);
       const screenId = formData.get("screenId");
@@ -829,17 +785,28 @@ export function getGmControlsApplicationClass() {
             .filter(Boolean);
         } else if (key === "attempts" || key === "maxAttempts") {
           config[key] = parseInt(value) || 4;
+        } else if (key === "password") {
+          // Password goes to private doc
+          const hash = await hashPassword(value);
+          await updateSecrets(this._selectedTerminalId, {
+            loginPassword: value,
+            loginPasswordHash: hash,
+          });
+          continue;
+        } else if (key === "correctWord") {
+          // Correct word goes to private doc
+          await updateSecrets(this._selectedTerminalId, {
+            hackingCorrectWord: value.trim().toUpperCase(),
+          });
+          continue;
         } else {
           config[key] = value;
         }
       }
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const termConfig = terminals[this._selectedTerminalId];
-      if (!termConfig) return;
-      termConfig.screenConfigs = termConfig.screenConfigs || {};
-      termConfig.screenConfigs[screenId] = { ...termConfig.screenConfigs[screenId], ...config };
-      game.settings.set(MODULE_ID, "terminals", terminals);
-      broadcastStateSync(this._selectedTerminalId, "updateConfig");
+
+      const screenState = getScreenState(this._selectedTerminalId);
+      const existing = screenState?.[screenId] || {};
+      await updateScreenState(this._selectedTerminalId, screenId, { ...existing, ...config });
       ui.notifications.info(`Config saved for ${screenId}`);
     }
 
@@ -906,9 +873,7 @@ export function getGmControlsApplicationClass() {
       container.appendChild(row);
       const select = row.querySelector(".step-action");
       select.addEventListener("change", () => this._updateStepParams(row));
-      row.querySelector(".step-remove").addEventListener("click", () => {
-        row.remove();
-      });
+      row.querySelector(".step-remove").addEventListener("click", () => row.remove());
     }
 
     _updateStepParams(row) {
@@ -947,7 +912,7 @@ export function getGmControlsApplicationClass() {
       emitSocket("runMacro", this._selectedTerminalId, { steps });
     }
 
-    _saveCustomSequence() {
+    async _saveCustomSequence() {
       if (!this._selectedTerminalId) return;
       const nameInput = this.element.querySelector(".custom-sequence-name");
       const name = nameInput?.value?.trim();
@@ -960,12 +925,9 @@ export function getGmControlsApplicationClass() {
         ui.notifications.warn("Add at least one step");
         return;
       }
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const config = terminals[this._selectedTerminalId];
-      if (!config) return;
-      config.customSequences = config.customSequences || [];
-      config.customSequences.push({ name, steps });
-      game.settings.set(MODULE_ID, "terminals", terminals);
+      const sequences = [...getCustomSequences(this._selectedTerminalId)];
+      sequences.push({ name, steps });
+      await updateCustomSequences(this._selectedTerminalId, sequences);
       nameInput.value = "";
       this.render();
       ui.notifications.info(`Sequence "${name}" saved`);
@@ -973,37 +935,31 @@ export function getGmControlsApplicationClass() {
 
     _runSavedSequence(index) {
       if (!this._selectedTerminalId) return;
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const seq = terminals[this._selectedTerminalId]?.customSequences?.[index];
+      const sequences = getCustomSequences(this._selectedTerminalId);
+      const seq = sequences[index];
       if (!seq) return;
       this._ensureTerminalOpen();
       runMacroSequence(this._selectedTerminalId, seq.steps);
       emitSocket("runMacro", this._selectedTerminalId, { steps: seq.steps });
     }
 
-    _deleteSavedSequence(index) {
+    async _deleteSavedSequence(index) {
       if (!this._selectedTerminalId) return;
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const config = terminals[this._selectedTerminalId];
-      if (!config?.customSequences) return;
-      config.customSequences.splice(index, 1);
-      game.settings.set(MODULE_ID, "terminals", terminals);
+      const sequences = [...getCustomSequences(this._selectedTerminalId)];
+      sequences.splice(index, 1);
+      await updateCustomSequences(this._selectedTerminalId, sequences);
       this.render();
     }
 
     _getFbConfig() {
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      return terminals[this._selectedTerminalId]?.screenConfigs?.fileBrowser || {};
+      const screenState = getScreenState(this._selectedTerminalId);
+      return screenState?.fileBrowser || {};
     }
 
-    _updateFbConfig(partial) {
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      const config = terminals[this._selectedTerminalId];
-      if (!config) return;
-      config.screenConfigs = config.screenConfigs || {};
-      config.screenConfigs.fileBrowser = config.screenConfigs.fileBrowser || {};
-      Object.assign(config.screenConfigs.fileBrowser, partial);
-      game.settings.set(MODULE_ID, "terminals", terminals);
+    async _updateFbConfig(partial) {
+      const screenState = getScreenState(this._selectedTerminalId);
+      const fb = { ...(screenState?.fileBrowser || {}), ...partial };
+      await updateScreenState(this._selectedTerminalId, "fileBrowser", fb);
     }
 
     _getFbFilesystem() {
@@ -1012,9 +968,8 @@ export function getGmControlsApplicationClass() {
       );
     }
 
-    _saveFbFilesystem(fs) {
-      this._updateFbConfig({ filesystem: fs });
-      broadcastStateSync(this._selectedTerminalId, "fileBrowserEdit");
+    async _saveFbFilesystem(fs) {
+      await this._updateFbConfig({ filesystem: fs });
     }
 
     _findNodeById(node, id) {
@@ -1060,7 +1015,7 @@ export function getGmControlsApplicationClass() {
           node.content = "";
         }
         parent.children.push(node);
-        this._saveFbFilesystem(fs);
+        await this._saveFbFilesystem(fs);
         if (result.contentType === "text") this._fbEditContent(node.id);
         else this.render();
       } else {
@@ -1076,7 +1031,7 @@ export function getGmControlsApplicationClass() {
           hidden: false,
           children: [],
         });
-        this._saveFbFilesystem(fs);
+        await this._saveFbFilesystem(fs);
         this.render();
       }
     }
@@ -1118,7 +1073,7 @@ export function getGmControlsApplicationClass() {
       });
       if (!confirmed) return;
       parent.children = parent.children.filter((c) => c.id !== nodeId);
-      this._saveFbFilesystem(fs);
+      await this._saveFbFilesystem(fs);
       this.render();
     }
 
@@ -1129,16 +1084,16 @@ export function getGmControlsApplicationClass() {
       const name = await this._fbPrompt("New name:", node.name);
       if (!name) return;
       node.name = name;
-      this._saveFbFilesystem(fs);
+      await this._saveFbFilesystem(fs);
       this.render();
     }
 
-    _fbToggleHidden(nodeId) {
+    async _fbToggleHidden(nodeId) {
       const fs = this._getFbFilesystem();
       const node = this._findNodeById(fs, nodeId);
       if (!node) return;
       node.hidden = !node.hidden;
-      this._saveFbFilesystem(fs);
+      await this._saveFbFilesystem(fs);
       this.render();
     }
 
@@ -1151,9 +1106,9 @@ export function getGmControlsApplicationClass() {
         const fp = new FilePicker({
           type: "image",
           current: node.imagePath || "",
-          callback: (path) => {
+          callback: async (path) => {
             node.imagePath = path;
-            this._saveFbFilesystem(fs);
+            await this._saveFbFilesystem(fs);
             this.render();
           },
         });
@@ -1169,7 +1124,7 @@ export function getGmControlsApplicationClass() {
         });
         if (content === null || content === undefined) return;
         node.content = content;
-        this._saveFbFilesystem(fs);
+        await this._saveFbFilesystem(fs);
         this.render();
       }
     }
@@ -1199,7 +1154,7 @@ export function getGmControlsApplicationClass() {
       if (!target) return;
       if (!target.children) target.children = [];
       target.children.push(node);
-      this._saveFbFilesystem(fs);
+      await this._saveFbFilesystem(fs);
       this.render();
     }
 
@@ -1273,7 +1228,7 @@ export function getGmControlsApplicationClass() {
       }
     }
 
-    _fbDropNode(draggedId, targetFolderId) {
+    async _fbDropNode(draggedId, targetFolderId) {
       if (!draggedId || draggedId === targetFolderId) return;
       const fs = this._getFbFilesystem();
       const dragged = this._findNodeById(fs, draggedId);
@@ -1286,7 +1241,7 @@ export function getGmControlsApplicationClass() {
       if (!target) return;
       if (!target.children) target.children = [];
       target.children.push(dragged);
-      this._saveFbFilesystem(fs);
+      await this._saveFbFilesystem(fs);
       this.render();
     }
 
@@ -1318,9 +1273,7 @@ export function getGmControlsApplicationClass() {
         });
       }
 
-      if (depth > 0) {
-        row.style.paddingLeft = `${depth * 20 + 6}px`;
-      }
+      if (depth > 0) row.style.paddingLeft = `${depth * 20 + 6}px`;
 
       if (node.type === "folder") {
         const collapsed = this._fbCollapsed.has(node.id);

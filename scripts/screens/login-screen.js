@@ -102,13 +102,14 @@ export class LoginScreen extends BaseScreen {
     }
   }
 
-  applyStateSync(screenConfig, syncMeta) {
+  applyStateSync(screenConfig) {
     if (screenConfig.attempts !== undefined) this.attempts = screenConfig.attempts;
     if (screenConfig.locked !== undefined && screenConfig.locked && !this.locked) this._lockout();
-    if (syncMeta?.trigger === "loginAttempt" && syncMeta?.triggerData?.correct !== undefined) {
+
+    if (screenConfig.lastResult != null) {
       const input = this.element?.querySelector(".login-password-input");
       if (input) input.value = "";
-      this.showResult(syncMeta.triggerData.correct);
+      this.showResult(screenConfig.lastResult === "granted");
     }
   }
 
@@ -128,7 +129,9 @@ export class LoginScreen extends BaseScreen {
     });
 
     const hashedPassword = await LoginScreen._hashPassword(password);
-    emitRequestAction(this.terminal.terminalId, "loginAttempt", { passwordHash: hashedPassword });
+    emitRequestAction(this.terminal.terminalId, "loginAttempt", {
+      passwordHash: hashedPassword,
+    });
   }
 
   _setStatus(text, className) {

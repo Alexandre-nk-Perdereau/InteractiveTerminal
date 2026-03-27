@@ -132,7 +132,7 @@ export class CrashScreen extends BaseScreen {
     }
   }
 
-  applyStateSync(screenConfig, syncMeta) {
+  applyStateSync(screenConfig) {
     if (screenConfig.preset && screenConfig.preset !== this.preset) {
       this.setPreset(screenConfig.preset);
     }

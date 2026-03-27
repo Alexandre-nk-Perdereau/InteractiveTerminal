@@ -209,11 +209,7 @@ export function getTerminalApplicationClass() {
       }
     }
 
-    applyStateSync(payload) {
-      const syncMeta = payload._syncMeta || {};
-      const newConfig = { ...payload };
-      delete newConfig._syncMeta;
-
+    applyDocumentUpdate(newConfig) {
       const screenChanged = newConfig.screen && newConfig.screen !== this.config.screen;
       const themeChanged = newConfig.theme && newConfig.theme !== this.config.theme;
       const titleChanged = newConfig.title && newConfig.title !== this.config.title;
@@ -221,7 +217,7 @@ export function getTerminalApplicationClass() {
       const permsChanged =
         newConfig.permissions && JSON.stringify(newConfig.permissions) !== JSON.stringify(this.config.permissions);
 
-      this.config = newConfig;
+      this.config = { ...this.config, ...newConfig };
 
       if (themeChanged) {
         const crt = this.element?.querySelector(".terminal-crt");
@@ -244,7 +240,7 @@ export function getTerminalApplicationClass() {
       } else if (this.currentScreen) {
         const screenId = this.config.screen || "login";
         const screenConfig = newConfig.screenConfigs?.[screenId] || {};
-        this.currentScreen.applyStateSync(screenConfig, syncMeta);
+        this.currentScreen.applyStateSync(screenConfig);
       }
     }
 
@@ -309,13 +305,6 @@ export function getTerminalApplicationClass() {
 
       GlitchEffect.trigger(this.element, "flash");
       SoundManager.play("boot");
-    }
-
-    async saveConfig() {
-      if (!game.user.isGM) return;
-      const terminals = game.settings.get(MODULE_ID, "terminals");
-      terminals[this.terminalId] = this.config;
-      await game.settings.set(MODULE_ID, "terminals", terminals);
     }
 
     async close(options = {}) {

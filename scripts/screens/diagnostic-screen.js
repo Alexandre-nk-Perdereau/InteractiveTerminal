@@ -45,7 +45,7 @@ export class DiagnosticScreen extends BaseScreen {
     super.deactivate();
   }
 
-  applyStateSync(screenConfig, syncMeta) {
+  applyStateSync(screenConfig) {
     if (screenConfig.gauges) {
       const prevLen = this.gauges.length;
       const newLen = screenConfig.gauges.length;
